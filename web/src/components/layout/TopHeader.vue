@@ -149,30 +149,6 @@ async function installPWA() {
         <span>Shell</span>
       </Button>
 
-      <!-- Toggle Zoom -->
-      <Button
-        variant="ghost"
-        size="icon"
-        @click="gridStore.toggleZoom()"
-        :disabled="gridStore.activePanes.length === 0"
-        title="Toggle Zoom Active Pane (Alt+Z)"
-        class="h-7 w-7 text-muted-foreground hover:text-foreground"
-      >
-        <Minimize2 v-if="gridStore.zoomedPaneId" class="w-3.5 h-3.5 text-primary" />
-        <Maximize2 v-else class="w-3.5 h-3.5" />
-      </Button>
-
-      <!-- Theme Quick Toggle (Light / Dark) -->
-      <Button
-        variant="ghost"
-        size="icon"
-        @click="settingsStore.toggleTheme()"
-        :title="settingsStore.theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'"
-        class="h-7 w-7 text-muted-foreground hover:text-foreground"
-      >
-        <Moon v-if="settingsStore.theme === 'light'" class="w-3.5 h-3.5" />
-        <Sun v-else class="w-3.5 h-3.5 text-amber-400" />
-      </Button>
 
       <!-- Settings Dialog Button -->
       <Button
