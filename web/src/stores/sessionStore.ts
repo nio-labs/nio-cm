@@ -7,7 +7,7 @@ export const useSessionStore = defineStore('sessions', () => {
     {
       id: 'session-default',
       name: 'Default Workspace',
-      cwd: '/home/mn/nio-labs',
+      cwd: '~',
       panes: [],
       activePaneId: null,
       createdAt: Date.now(),
@@ -38,7 +38,7 @@ export const useSessionStore = defineStore('sessions', () => {
     return sessions.value.find((s) => s.id === activeSessionId.value) || sessions.value[0]
   })
 
-  function createSession(name: string, cwd: string = '/home/mn/nio-labs'): string {
+  function createSession(name: string, cwd: string = '~'): string {
     const id = `session-${Date.now()}`
     sessions.value.push({
       id,

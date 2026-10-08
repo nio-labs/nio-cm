@@ -153,8 +153,19 @@ impl PtyManager {
         }
 
         if let Some(dir) = cwd.as_deref() {
-            if std::path::Path::new(dir).is_dir() {
-                cmd.cwd(dir);
+            let expanded_dir = if dir.starts_with('~') {
+                let home_env = if cfg!(windows) { std::env::var("USERPROFILE") } else { std::env::var("HOME") };
+                if let Ok(home) = home_env {
+                    dir.replacen('~', &home, 1)
+                } else {
+                    dir.to_string()
+                }
+            } else {
+                dir.to_string()
+            };
+
+            if std::path::Path::new(&expanded_dir).is_dir() {
+                cmd.cwd(expanded_dir);
             }
         }
 
