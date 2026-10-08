@@ -60,7 +60,7 @@ const gridStyle = computed(() => {
     <template v-else>
       <div class="h-full w-full flex flex-col items-center justify-center text-center p-6 space-y-4">
         <div class="h-16 w-16 rounded-2xl bg-[#008080]/10 border border-[#008080]/30 flex items-center justify-center text-primary shadow-inner">
-          <Bot class="w-8 h-8 animate-pulse text-[#008080] dark:text-teal-400" />
+          <Bot class="w-8 h-8 animate-pulse text-[#008080]" />
         </div>
 
         <div class="space-y-1 max-w-sm">

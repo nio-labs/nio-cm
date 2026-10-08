@@ -182,7 +182,7 @@ function handleFocus() {
         <span class="font-mono text-[10px] text-muted-foreground">#{{ index + 1 }}</span>
 
         <!-- Shell or Agent icon -->
-        <Bot v-if="pane.shell === 'nio'" class="w-3.5 h-3.5 text-[#008080] dark:text-teal-400 shrink-0" />
+        <Bot v-if="pane.shell === 'nio'" class="w-3.5 h-3.5 text-[#008080] shrink-0" />
         <TerminalIcon v-else class="w-3.5 h-3.5 text-muted-foreground shrink-0" />
 
         <!-- Title -->
@@ -190,7 +190,7 @@ function handleFocus() {
 
         <!-- Agent Status Badges -->
         <template v-if="pane.shell === 'nio'">
-          <Badge variant="outline" class="text-[9px] px-1 py-0 h-3.5 border-[#008080]/40 text-[#008080] dark:text-teal-300 bg-[#008080]/10">
+          <Badge variant="outline" class="text-[9px] px-1 py-0 h-3.5 border-[#008080]/40 text-[#008080] bg-[#008080]/10">
             NioAI
           </Badge>
           <Badge variant="outline" class="text-[9px] px-1 py-0 h-3.5 text-muted-foreground">

@@ -66,8 +66,8 @@ async function installPWA() {
     <div class="flex items-center gap-3">
       <div class="flex items-center gap-2 tracking-tight text-sm">
         <div class="h-6 w-6 rounded-lg overflow-hidden flex items-center justify-center shadow-xs shrink-0">
-          <svg viewBox="0 0 2042 2042" class="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="2042" height="2042" rx="420" fill="#008080"/>
+          <svg viewBox="0 0 2042 2042" class="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg" style="color-scheme: light dark;">
+            <rect width="2042" height="2042" rx="420" fill="#008080" style="fill: #008080 !important;" />
             <path d="M570 710L980 1021L570 1332" stroke="white" stroke-width="150" stroke-linecap="round" stroke-linejoin="round"/>
             <circle cx="1330" cy="1235" r="130" fill="white"/>
           </svg>
