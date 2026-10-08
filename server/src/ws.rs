@@ -213,7 +213,7 @@ async fn handle_command(
         "get_system_info" => {
             let os = std::env::consts::OS;
             let arch = std::env::consts::ARCH;
-            let has_nio = which_command("nio");
+            let has_nio = crate::nio_setup::find_nio_binary().is_some();
             let has_niodb = which_command("niodb") || which_command("nio-db");
             let has_niojs = which_command("nio-js");
 

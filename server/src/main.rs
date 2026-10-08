@@ -1,5 +1,6 @@
 mod pty;
 mod ws;
+mod nio_setup;
 
 use axum::{
     extract::{ws::WebSocketUpgrade, State},
@@ -24,6 +25,7 @@ struct AppState {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    nio_setup::ensure_nio_binary().await;
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()

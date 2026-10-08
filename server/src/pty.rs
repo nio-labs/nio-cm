@@ -115,7 +115,7 @@ impl PtyManager {
         cols: u32,
         rows: u32,
     ) -> Result<PtySession, String> {
-        let shell_path = shell.unwrap_or_else(|| {
+        let mut shell_path = shell.unwrap_or_else(|| {
             if cfg!(target_os = "windows") {
                 "powershell.exe".to_string()
             } else {
@@ -127,6 +127,12 @@ impl PtyManager {
                 "/bin/sh".to_string()
             }
         });
+
+        if shell_path == "nio" {
+            if let Some(resolved) = crate::nio_setup::find_nio_binary() {
+                shell_path = resolved.to_string_lossy().to_string();
+            }
+        }
 
         let pty_system = native_pty_system();
         let pair = pty_system
