@@ -383,6 +383,7 @@ impl PtyManager {
         }
     }
 
+    #[allow(dead_code)]
     pub fn session_count(&self) -> usize {
         self.sessions.len()
     }
