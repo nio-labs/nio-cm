@@ -1,0 +1,11 @@
+<!-- Concept A: The Sovereign Dash (Pure geometric minimalism)
+     Like NioDE's single cursor pill, NioCM features the dual command prompt:
+     A vertical beam (agent cursor) and a horizontal dash (command prompt).
+     Balanced, ultra-clean, Apple/Braun level minimalism. -->
+<svg width="2042" height="2042" viewBox="0 0 2042 2042" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="2042" height="2042" rx="420" fill="#008080"/>
+  <!-- Left: Command chevron bracket (refined geometry) -->
+  <path d="M620 740L960 1021L620 1302" stroke="white" stroke-width="140" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Right: Minimalist block cursor pill -->
+  <rect x="1140" y="740" width="280" height="562" rx="140" fill="white"/>
+</svg>

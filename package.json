@@ -1,0 +1,27 @@
+{
+  "name": "@nio-labs/nio-cm",
+  "version": "0.1.0",
+  "description": "NioCM — The Agentic Terminal. Desktop PWA Terminal with multi-pane spatial grid powered by NioAI.",
+  "type": "module",
+  "scripts": {
+    "dev:web": "cd web && pnpm dev",
+    "dev:server": "cargo run --manifest-path server/Cargo.toml",
+    "build:web": "cd web && pnpm build",
+    "build:server": "cargo build --release --manifest-path server/Cargo.toml",
+    "build": "pnpm build:web && pnpm build:server",
+    "start": "./target/release/niocm"
+  },
+  "keywords": [
+    "terminal",
+    "agentic-terminal",
+    "xterm",
+    "nio",
+    "nio-ai",
+    "shadcn",
+    "vue3",
+    "rust",
+    "pty"
+  ],
+  "author": "Nio Labs Team",
+  "license": "MIT"
+}

@@ -1,0 +1,9 @@
+<!-- Concept A.Dot-2: Command prompt with vertically centered pulse dot
+     Prompt chevron '>' pointing into a centered focused agent dot `> •` -->
+<svg width="2042" height="2042" viewBox="0 0 2042 2042" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="2042" height="2042" rx="420" fill="#008080"/>
+  <!-- Refined Command Chevron -->
+  <path d="M580 720L980 1021L580 1322" stroke="white" stroke-width="150" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Centered pulse dot / agent focus point -->
+  <circle cx="1320" cy="1021" r="110" fill="white"/>
+</svg>

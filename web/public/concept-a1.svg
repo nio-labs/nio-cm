@@ -1,0 +1,10 @@
+<!-- Concept A.1: The Monolith Beam (Precision Slender)
+     Chevron stroke + slender tall cursor beam.
+     Razor-sharp, Swiss design precision. -->
+<svg width="2042" height="2042" viewBox="0 0 2042 2042" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="2042" height="2042" rx="420" fill="#008080"/>
+  <!-- Chevron -->
+  <path d="M580 720L980 1021L580 1322" stroke="white" stroke-width="150" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Slender Monolith Beam cursor -->
+  <rect x="1200" y="680" width="180" height="682" rx="90" fill="white"/>
+</svg>

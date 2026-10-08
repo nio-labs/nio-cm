@@ -1,0 +1,192 @@
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import type { TerminalPane } from '../types'
+import { useSessionStore } from './sessionStore'
+
+export const MAX_PANES = 10
+
+export const useGridStore = defineStore('grid', () => {
+  const sessionStore = useSessionStore()
+
+  // Local map of session_id -> TerminalPane[]
+  const sessionPanes = ref<Record<string, TerminalPane[]>>({})
+  const focusedPaneId = ref<string | null>(null)
+  const zoomedPaneId = ref<string | null>(null)
+
+  const activePanes = computed({
+    get() {
+      const sId = sessionStore.activeSessionId
+      if (!sessionPanes.value[sId]) {
+        sessionPanes.value[sId] = []
+      }
+      return sessionPanes.value[sId]
+    },
+    set(val: TerminalPane[]) {
+      const sId = sessionStore.activeSessionId
+      sessionPanes.value[sId] = val
+    },
+  })
+
+  const gridColumns = computed(() => {
+    const count = activePanes.value.length
+    if (count <= 1) return 1
+    if (count <= 4) return 2
+    if (count <= 6) return 3
+    if (count <= 9) return 3
+    return 4 // 10 panes
+  })
+
+  function getFocusedIndex(): number {
+    if (!focusedPaneId.value) return 0
+    const idx = activePanes.value.findIndex((p) => p.id === focusedPaneId.value)
+    return idx === -1 ? 0 : idx
+  }
+
+  function addPane(
+    shell: string = 'nio',
+    args?: string[],
+    title?: string,
+    cwd?: string
+  ): TerminalPane | null {
+    if (activePanes.value.length >= MAX_PANES) {
+      console.warn(`[NioCM] Maximum limit of ${MAX_PANES} panes reached.`)
+      return null
+    }
+
+    const sId = sessionStore.activeSessionId
+    const count = activePanes.value.length + 1
+    const id = `pane-${sId}-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+    const defaultTitle = title || (shell === 'nio' ? `NioAI Agent #${count}` : `Terminal #${count}`)
+
+    const newPane: TerminalPane = {
+      id,
+      sessionId: id,
+      title: defaultTitle,
+      shell,
+      args,
+      cwd: cwd || sessionStore.activeSession.cwd,
+      status: shell === 'nio' ? 'agent' : 'idle',
+      agentMetadata: shell === 'nio' ? { model: 'kilo-auto', mode: 'build' } : undefined,
+      createdAt: Date.now(),
+    }
+
+    activePanes.value.push(newPane)
+    focusedPaneId.value = id
+    return newPane
+  }
+
+  function closePane(id: string) {
+    const idx = activePanes.value.findIndex((p) => p.id === id)
+    if (idx !== -1) {
+      activePanes.value.splice(idx, 1)
+      if (zoomedPaneId.value === id) {
+        zoomedPaneId.value = null
+      }
+      if (focusedPaneId.value === id) {
+        if (activePanes.value.length > 0) {
+          const nextIdx = Math.min(idx, activePanes.value.length - 1)
+          focusedPaneId.value = activePanes.value[nextIdx].id
+        } else {
+          focusedPaneId.value = null
+        }
+      }
+    }
+  }
+
+  function setFocused(id: string) {
+    if (activePanes.value.some((p) => p.id === id)) {
+      focusedPaneId.value = id
+    }
+  }
+
+  function toggleZoom(id?: string) {
+    const targetId = id || focusedPaneId.value
+    if (!targetId) return
+
+    if (zoomedPaneId.value === targetId) {
+      zoomedPaneId.value = null
+    } else {
+      zoomedPaneId.value = targetId
+      focusedPaneId.value = targetId
+    }
+  }
+
+  function swapPanes(idxA: number, idxB: number) {
+    const list = activePanes.value
+    if (idxA >= 0 && idxA < list.length && idxB >= 0 && idxB < list.length && idxA !== idxB) {
+      const temp = list[idxA]
+      list[idxA] = list[idxB]
+      list[idxB] = temp
+    }
+  }
+
+  function navigateSpatial(direction: 'up' | 'down' | 'left' | 'right') {
+    const count = activePanes.value.length
+    if (count <= 1) return
+
+    const cols = gridColumns.value
+    const currentIdx = getFocusedIndex()
+    let targetIdx = currentIdx
+
+    switch (direction) {
+      case 'left':
+        if (currentIdx > 0) targetIdx = currentIdx - 1
+        break
+      case 'right':
+        if (currentIdx < count - 1) targetIdx = currentIdx + 1
+        break
+      case 'up':
+        if (currentIdx - cols >= 0) targetIdx = currentIdx - cols
+        break
+      case 'down':
+        if (currentIdx + cols < count) targetIdx = currentIdx + cols
+        break
+    }
+
+    if (targetIdx !== currentIdx) {
+      focusedPaneId.value = activePanes.value[targetIdx].id
+    }
+  }
+
+  function swapSpatial(direction: 'up' | 'down' | 'left' | 'right') {
+    const count = activePanes.value.length
+    if (count <= 1) return
+
+    const cols = gridColumns.value
+    const currentIdx = getFocusedIndex()
+    let targetIdx = currentIdx
+
+    switch (direction) {
+      case 'left':
+        if (currentIdx > 0) targetIdx = currentIdx - 1
+        break
+      case 'right':
+        if (currentIdx < count - 1) targetIdx = currentIdx + 1
+        break
+      case 'up':
+        if (currentIdx - cols >= 0) targetIdx = currentIdx - cols
+        break
+      case 'down':
+        if (currentIdx + cols < count) targetIdx = currentIdx + cols
+        break
+    }
+
+    if (targetIdx !== currentIdx) {
+      swapPanes(currentIdx, targetIdx)
+    }
+  }
+
+  return {
+    activePanes,
+    gridColumns,
+    focusedPaneId,
+    zoomedPaneId,
+    addPane,
+    closePane,
+    setFocused,
+    toggleZoom,
+    swapPanes,
+    navigateSpatial,
+    swapSpatial,
+  }
+})

@@ -1,0 +1,13 @@
+<!-- Option 3: Terminal Command Core / Quantum Hexagon (Agent Loop + Command Line) -->
+<svg width="2042" height="2042" viewBox="0 0 2042 2042" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="2042" height="2042" rx="460" fill="#008080"/>
+  <!-- Central Terminal Frame with Rounded Bevel -->
+  <rect x="360" y="440" width="1322" height="1162" rx="160" stroke="white" stroke-width="120"/>
+  <!-- Inner Agent Orbit Arc -->
+  <path d="M680 1021L960 1200L680 1380" stroke="white" stroke-width="130" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- AI Agent Autonomous Orbit / Eye -->
+  <circle cx="1320" cy="860" r="140" fill="white"/>
+  <circle cx="1320" cy="860" r="60" fill="#008080"/>
+  <!-- Command cursor underline -->
+  <rect x="1120" y="1300" width="400" height="110" rx="55" fill="white"/>
+</svg>

@@ -1,0 +1,10 @@
+<!-- Option 2: The Agentic Spark Prompt (Prompt chevron + 4-pointed AI intelligence spark) -->
+<svg width="2042" height="2042" viewBox="0 0 2042 2042" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="2042" height="2042" rx="460" fill="#008080"/>
+  <!-- Terminal Prompt Chevron '>' -->
+  <path d="M460 760L860 1021L460 1282" stroke="white" stroke-width="160" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Four-pointed AI Intelligence Spark / Diamond star as the cursor -->
+  <path d="M1360 620C1360 840 1540 1020 1760 1020C1540 1020 1360 1200 1360 1420C1360 1200 1180 1020 960 1020C1180 1020 1360 840 1360 620Z" fill="white"/>
+  <!-- Central pulse dot -->
+  <circle cx="1360" cy="1020" r="50" fill="#008080"/>
+</svg>

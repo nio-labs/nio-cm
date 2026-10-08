@@ -1,0 +1,30 @@
+[package]
+name = "niocm-server"
+version = "0.1.0"
+edition = "2021"
+description = "NioCM — Agentic Terminal WebSocket daemon & static file host"
+authors = ["Nio Labs Team"]
+
+[[bin]]
+name = "niocm"
+path = "src/main.rs"
+
+[dependencies]
+axum = { version = "0.7", features = ["ws"] }
+tokio = { version = "1", features = ["full"] }
+tower = { version = "0.5" }
+tower-http = { version = "0.6", features = ["fs", "cors", "trace"] }
+portable-pty = "0.9.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+futures-util = "0.3"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+ctrlc = "3"
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

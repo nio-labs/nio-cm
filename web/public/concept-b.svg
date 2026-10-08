@@ -1,0 +1,12 @@
+<!-- Concept B: The Quantum Node / Autonomous Ring
+     A continuous single-stroke loop representing the autonomous REPL cycle.
+     Ultra minimal: clean circular core with a tangent terminal exit pulse. -->
+<svg width="2042" height="2042" viewBox="0 0 2042 2042" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="2042" height="2042" rx="420" fill="#008080"/>
+  <!-- The Autonomous Command Loop (Open ring + cursor dash) -->
+  <circle cx="1021" cy="1021" r="420" stroke="white" stroke-width="140" stroke-linecap="round" stroke-dasharray="1900" stroke-dashoffset="500"/>
+  <!-- Inner autonomous core dot -->
+  <circle cx="1021" cy="1021" r="130" fill="white"/>
+  <!-- Trailing execution dash -->
+  <rect x="1220" y="951" width="340" height="140" rx="70" fill="white"/>
+</svg>

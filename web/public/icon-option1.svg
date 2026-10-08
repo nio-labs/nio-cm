@@ -1,0 +1,21 @@
+<!-- Option 1: Dual Matrix / Multiplexer (Split Tiled Grid) -->
+<svg width="2042" height="2042" viewBox="0 0 2042 2042" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="2042" height="2042" rx="460" fill="#008080"/>
+  <!-- Top terminal bar -->
+  <rect x="360" y="360" width="1322" height="260" rx="90" fill="white" fill-opacity="0.2"/>
+  <circle cx="520" cy="490" r="45" fill="white"/>
+  <circle cx="650" cy="490" r="45" fill="white" fill-opacity="0.6"/>
+  <circle cx="780" cy="490" r="45" fill="white" fill-opacity="0.6"/>
+  <!-- Left Tile: Prompt symbol -->
+  <rect x="360" y="690" width="620" height="990" rx="90" fill="white" fill-opacity="0.15"/>
+  <path d="M520 1000L660 1120L520 1240" stroke="white" stroke-width="70" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="710" y1="1240" x2="840" y2="1240" stroke="white" stroke-width="70" stroke-linecap="round"/>
+  <!-- Right Tile: Agentic AI Node & Sparks -->
+  <rect x="1060" y="690" width="622" height="990" rx="90" fill="white" fill-opacity="0.15"/>
+  <circle cx="1371" cy="1050" r="140" fill="none" stroke="white" stroke-width="60"/>
+  <circle cx="1371" cy="1050" r="50" fill="white"/>
+  <line x1="1371" y1="840" x2="1371" y2="760" stroke="white" stroke-width="50" stroke-linecap="round"/>
+  <line x1="1371" y1="1260" x2="1371" y2="1340" stroke="white" stroke-width="50" stroke-linecap="round"/>
+  <line x1="1160" y1="1050" x2="1080" y2="1050" stroke="white" stroke-width="50" stroke-linecap="round"/>
+  <line x1="1582" y1="1050" x2="1662" y2="1050" stroke="white" stroke-width="50" stroke-linecap="round"/>
+</svg>

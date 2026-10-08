@@ -1,0 +1,10 @@
+<!-- Concept A.2: Solid Block Terminal (Authentic Monospace Glyph)
+     Solid fill chevron polygon + matching proportions solid block cursor.
+     Iconic, robust, instantly recognizable from 16px to 512px. -->
+<svg width="2042" height="2042" viewBox="0 0 2042 2042" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="2042" height="2042" rx="420" fill="#008080"/>
+  <!-- Solid Geometric Chevron -->
+  <path d="M540 680L960 1021L540 1362V1200L760 1021L540 842V680Z" fill="white"/>
+  <!-- Authentic Solid Block Cursor with softened corners -->
+  <rect x="1140" y="680" width="360" height="682" rx="100" fill="white"/>
+</svg>

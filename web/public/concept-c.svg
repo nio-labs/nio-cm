@@ -1,0 +1,12 @@
+<!-- Concept C: The Twin Horizon / Spatial Matrix
+     Two clean horizontal pill bars offset vertically.
+     Echoes NioDE's single cursor bar (y=1341 width=800 height=200),
+     but NioCM has dual offset pills forming an abstract 'C / M / Grid' spatial split.
+     Direct sibling to NioDE's brand identity. -->
+<svg width="2042" height="2042" viewBox="0 0 2042 2042" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="2042" height="2042" rx="420" fill="#008080"/>
+  <!-- Top bar: Command entry -->
+  <rect x="560" y="760" width="560" height="180" rx="90" fill="white"/>
+  <!-- Bottom bar: Agent response (offset right, like a chat/grid interaction) -->
+  <rect x="920" y="1100" width="560" height="180" rx="90" fill="white"/>
+</svg>

@@ -1,0 +1,10 @@
+<!-- Concept A.Dot-3: Square Terminal Pixel / Bit Dot at bottom baseline
+     Terminal chevron '>' with a rounded square bit block cursor at bottom.
+     Brings the nostalgic terminal pixel / terminal block cursor feel in a minimal dot. -->
+<svg width="2042" height="2042" viewBox="0 0 2042 2042" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="2042" height="2042" rx="420" fill="#008080"/>
+  <!-- Refined Command Chevron -->
+  <path d="M580 720L980 1021L580 1322" stroke="white" stroke-width="150" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Rounded square terminal pixel dot at baseline -->
+  <rect x="1220" y="1150" width="200" height="200" rx="50" fill="white"/>
+</svg>

@@ -1,0 +1,10 @@
+<!-- Concept A.Dot-1: Center-Bottom Dot
+     Classic Terminal Chevron '>' with a solid circular dot at the bottom baseline.
+     Super clean, minimal punctuation: `> .` -->
+<svg width="2042" height="2042" viewBox="0 0 2042 2042" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="2042" height="2042" rx="420" fill="#008080"/>
+  <!-- Refined Command Chevron -->
+  <path d="M580 720L980 1021L580 1322" stroke="white" stroke-width="150" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Small solid dot at the bottom baseline -->
+  <circle cx="1320" cy="1247" r="105" fill="white"/>
+</svg>
