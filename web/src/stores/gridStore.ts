@@ -55,12 +55,14 @@ export const useGridStore = defineStore('grid', () => {
 
     const sId = sessionStore.activeSessionId
     const count = activePanes.value.length + 1
+    const sequenceId = Math.max(0, ...activePanes.value.map(p => p.sequenceId || 0)) + 1
     const id = `pane-${sId}-${Date.now()}-${Math.floor(Math.random() * 1000)}`
-    const defaultTitle = title || (shell === 'nio' ? `NioAI Agent #${count}` : `Terminal #${count}`)
+    const defaultTitle = title || (shell === 'nio' ? `NioAI Agent #${sequenceId}` : `Terminal #${sequenceId}`)
 
     const newPane: TerminalPane = {
       id,
       sessionId: id,
+      sequenceId,
       title: defaultTitle,
       shell,
       args,
@@ -99,6 +101,13 @@ export const useGridStore = defineStore('grid', () => {
     }
   }
 
+  function updatePaneCwd(id: string, cwd: string) {
+    const p = activePanes.value.find((x) => x.id === id)
+    if (p) {
+      p.cwd = cwd
+    }
+  }
+
   function toggleZoom(id?: string) {
     const targetId = id || focusedPaneId.value
     if (!targetId) return
@@ -120,58 +129,92 @@ export const useGridStore = defineStore('grid', () => {
     }
   }
 
-  function navigateSpatial(direction: 'up' | 'down' | 'left' | 'right') {
-    const count = activePanes.value.length
-    if (count <= 1) return
-
+  function getGridMap() {
     const cols = gridColumns.value
+    const count = activePanes.value.length
+    const rows = Math.ceil(count / cols) || 1
+    const extraCells = (cols * rows) - count
+
+    const grid: number[][] = Array.from({ length: rows }, () => Array(cols).fill(-1))
+    
+    let currentIdx = 0
+    const spanCount = extraCells > 0 ? 1 + extraCells : 1
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (grid[r][c] !== -1) continue
+        if (currentIdx >= count) break
+        
+        if (currentIdx === 0 && extraCells > 0) {
+          for (let s = 0; s < spanCount; s++) {
+            if (r + s < rows) {
+              grid[r + s][c] = currentIdx
+            }
+          }
+        } else {
+          grid[r][c] = currentIdx
+        }
+        currentIdx++
+      }
+    }
+    return { grid, rows, cols }
+  }
+
+  function getTargetIdx(direction: 'up' | 'down' | 'left' | 'right') {
+    const count = activePanes.value.length
+    if (count <= 1) return -1
+
+    const { grid, rows, cols } = getGridMap()
     const currentIdx = getFocusedIndex()
-    let targetIdx = currentIdx
+
+    // Find bounding box of currentIdx
+    let minR = rows, maxR = -1, minC = cols, maxC = -1
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (grid[r][c] === currentIdx) {
+          if (r < minR) minR = r
+          if (r > maxR) maxR = r
+          if (c < minC) minC = c
+          if (c > maxC) maxC = c
+        }
+      }
+    }
+
+    let targetR = minR
+    let targetC = minC
 
     switch (direction) {
       case 'left':
-        if (currentIdx > 0) targetIdx = currentIdx - 1
+        targetC = minC - 1
         break
       case 'right':
-        if (currentIdx < count - 1) targetIdx = currentIdx + 1
+        targetC = maxC + 1
         break
       case 'up':
-        if (currentIdx - cols >= 0) targetIdx = currentIdx - cols
+        targetR = minR - 1
         break
       case 'down':
-        if (currentIdx + cols < count) targetIdx = currentIdx + cols
+        targetR = maxR + 1
         break
     }
 
-    if (targetIdx !== currentIdx) {
+    if (targetR >= 0 && targetR < rows && targetC >= 0 && targetC < cols) {
+      return grid[targetR][targetC]
+    }
+    return -1
+  }
+
+  function navigateSpatial(direction: 'up' | 'down' | 'left' | 'right') {
+    const targetIdx = getTargetIdx(direction)
+    if (targetIdx !== -1 && targetIdx !== getFocusedIndex()) {
       focusedPaneId.value = activePanes.value[targetIdx].id
     }
   }
 
   function swapSpatial(direction: 'up' | 'down' | 'left' | 'right') {
-    const count = activePanes.value.length
-    if (count <= 1) return
-
-    const cols = gridColumns.value
+    const targetIdx = getTargetIdx(direction)
     const currentIdx = getFocusedIndex()
-    let targetIdx = currentIdx
-
-    switch (direction) {
-      case 'left':
-        if (currentIdx > 0) targetIdx = currentIdx - 1
-        break
-      case 'right':
-        if (currentIdx < count - 1) targetIdx = currentIdx + 1
-        break
-      case 'up':
-        if (currentIdx - cols >= 0) targetIdx = currentIdx - cols
-        break
-      case 'down':
-        if (currentIdx + cols < count) targetIdx = currentIdx + cols
-        break
-    }
-
-    if (targetIdx !== currentIdx) {
+    if (targetIdx !== -1 && targetIdx !== currentIdx) {
       swapPanes(currentIdx, targetIdx)
     }
   }
@@ -184,6 +227,7 @@ export const useGridStore = defineStore('grid', () => {
     addPane,
     closePane,
     setFocused,
+    updatePaneCwd,
     toggleZoom,
     swapPanes,
     navigateSpatial,

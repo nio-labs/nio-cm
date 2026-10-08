@@ -227,6 +227,26 @@ async fn handle_command(
                 }
             }))
         }
+        "list_dirs" => {
+            let path = args["path"].as_str().unwrap_or("/");
+            let mut dirs = vec![];
+            
+            if path != "/" {
+                dirs.push("..".to_string());
+            }
+
+            if let Ok(entries) = std::fs::read_dir(path) {
+                for entry in entries.filter_map(Result::ok) {
+                    if let Ok(ft) = entry.file_type() {
+                        if ft.is_dir() {
+                            dirs.push(entry.file_name().to_string_lossy().to_string());
+                        }
+                    }
+                }
+            }
+            dirs.sort();
+            Ok(json!({ "dirs": dirs, "current": path }))
+        }
         _ => Err(format!("Unknown command: {}", cmd)),
     }
 }

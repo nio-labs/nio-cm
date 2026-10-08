@@ -913,48 +913,34 @@ const THEMES: Record<string, XtermTheme> = {
   mintFresh,
 }
 
-// Map UI theme → terminal theme for the "match-ui" option
-const UI_THEME_MAP: Record<string, string> = {
-  'codex-dark': 'codex-dark',
-  codex: 'codex',
-  midnight: 'midnight',
-  nord: 'nord',
-  'nord-light': 'nord-light', // use the light Nord palette so a light UI gets a light terminal
-  'solarized-dark': 'solarized-dark',
-  'solarized-light': 'solarized-light',
-  'github-dark': 'github-dark',
-  'tokyo-night': 'tokyo-night',
-  dracula: 'dracula',
-  claw: 'claw',
-  cyberpunk: 'cyberpunk',
-  'cyberpunk-light': 'cyberpunk-light',
-  aurora: 'aurora',
-  'aurora-light': 'aurora-light',
-  candy: 'candy',
-  slate: 'slate',
-  phosphor: 'phosphor',
-  amber: 'amber',
-  cream: 'cream',
-  'ocean-breeze': 'oceanBreeze',
-  'lavender-dream': 'lavenderDream',
-  'mint-fresh': 'mintFresh',
-}
-
 /**
  * Get the xterm terminal theme for a given terminal theme setting.
- * When `terminalThemeSetting` is 'match-ui', the current UI theme is used.
  */
-export function getTerminalTheme(
-  terminalThemeSetting: string,
-  uiTheme: string,
-): XtermTheme {
-  const resolved = terminalThemeSetting === 'match-ui' ? (UI_THEME_MAP[uiTheme] ?? 'github-dark') : terminalThemeSetting
-  return THEMES[resolved] ?? THEMES['github-dark']
+export function getTerminalTheme(terminalThemeSetting: string): XtermTheme {
+  return THEMES[terminalThemeSetting] ?? THEMES['aurora-light']
+}
+
+const LIGHT_THEMES = [
+  'github-light',
+  'one-light',
+  'nord-light',
+  'solarized-light',
+  'codex',
+  'cyberpunk-light',
+  'aurora-light',
+  'slate',
+  'cream',
+  'ocean-breeze',
+  'lavender-dream',
+  'mint-fresh',
+]
+
+export function isTerminalThemeDark(themeKey: string): boolean {
+  return !LIGHT_THEMES.includes(themeKey)
 }
 
 /** All available terminal themes for the settings dropdown. */
 export const TERMINAL_THEMES: { value: string; label: string }[] = [
-  { value: 'match-ui', label: 'Match UI Theme' },
   // Dark
   { value: 'github-dark', label: 'GitHub Dark' },
   { value: 'one-dark', label: 'One Dark' },

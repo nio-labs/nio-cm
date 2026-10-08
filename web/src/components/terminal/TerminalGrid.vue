@@ -27,6 +27,18 @@ const gridStyle = computed(() => {
     gap: '6px',
   }
 })
+
+function getPaneStyle(idx: number) {
+  const count = gridStore.activePanes.length
+  const cols = gridStore.gridColumns
+  const rows = Math.ceil(count / cols) || 1
+  const extraCells = (cols * rows) - count
+
+  if (idx === 0 && extraCells > 0) {
+    return { gridRow: `span ${1 + extraCells}` }
+  }
+  return {}
+}
 </script>
 
 <template>
@@ -52,6 +64,7 @@ const gridStyle = computed(() => {
           :key="pane.id"
           :pane="pane"
           :index="idx"
+          :style="getPaneStyle(idx)"
         />
       </div>
     </template>
@@ -94,8 +107,8 @@ const gridStyle = computed(() => {
 
         <div class="pt-6 flex items-center gap-4 text-[11px] text-muted-foreground/80">
           <span><kbd class="px-1.5 py-0.5 bg-muted rounded font-mono text-[10px]">Alt + N</kbd> New Pane</span>
-          <span><kbd class="px-1.5 py-0.5 bg-muted rounded font-mono text-[10px]">Alt + Arrows</kbd> Navigate</span>
-          <span><kbd class="px-1.5 py-0.5 bg-muted rounded font-mono text-[10px]">Alt + Shift + Arrows</kbd> Swap</span>
+          <span><kbd class="px-1.5 py-0.5 bg-muted rounded font-mono text-[10px]">Alt + Arrows</kbd> Swap</span>
+          <span><kbd class="px-1.5 py-0.5 bg-muted rounded font-mono text-[10px]">Alt + Shift + Arrows</kbd> Navigate</span>
         </div>
       </div>
     </template>

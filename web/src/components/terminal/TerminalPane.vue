@@ -15,7 +15,8 @@ import {
   Minimize2,
   X,
   Bot,
-  Terminal as TerminalIcon
+  Terminal as TerminalIcon,
+  FolderOpen
 } from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -33,9 +34,66 @@ let fitAddon: FitAddon | null = null
 let resizeObserver: ResizeObserver | null = null
 let unbindOutput: (() => void) | null = null
 let unbindExit: (() => void) | null = null
+let spawnPty: () => Promise<void> = async () => {}
 
 const isFocused = computed(() => gridStore.focusedPaneId === props.pane.id)
 const isZoomed = computed(() => gridStore.zoomedPaneId === props.pane.id)
+
+const showCwdModal = ref(false)
+const cwdInput = ref('')
+const cwdDirs = ref<string[]>([])
+const cwdLoading = ref(false)
+const cwdFilter = ref('')
+
+async function fetchDirs(path: string) {
+  cwdLoading.value = true
+  try {
+    const res = await ws.sendCommand('list_dirs', { path })
+    cwdDirs.value = res.dirs || []
+    cwdInput.value = res.current || path
+  } catch (e) {
+  } finally {
+    cwdLoading.value = false
+  }
+}
+
+watch(showCwdModal, (v) => {
+  if (v) {
+    cwdFilter.value = ''
+    fetchDirs(cwdInput.value)
+  }
+})
+
+const filteredDirs = computed(() => {
+  if (!cwdFilter.value) return cwdDirs.value
+  return cwdDirs.value.filter(d => d.toLowerCase().includes(cwdFilter.value.toLowerCase()))
+})
+
+function selectDir(d: string) {
+  if (d === '..') {
+    const parts = cwdInput.value.replace(/\/$/, '').split('/')
+    parts.pop()
+    cwdInput.value = parts.join('/') || '/'
+  } else {
+    cwdInput.value = cwdInput.value.replace(/\/$/, '') + '/' + d
+  }
+  cwdFilter.value = ''
+  fetchDirs(cwdInput.value)
+}
+
+async function changeWorkingDirectory() {
+  if (cwdInput.value.trim() && cwdInput.value.trim() !== props.pane.cwd) {
+    gridStore.updatePaneCwd(props.pane.id, cwdInput.value.trim())
+    // Kill existing PTY
+    try {
+      await ws.sendCommand('pty_kill', { sessionId: props.pane.sessionId })
+    } catch (e) {}
+    term?.reset()
+    term?.write(`\x1b[36mRestarting in ${cwdInput.value.trim()}...\x1b[0m\r\n`)
+    spawnPty()
+  }
+  showCwdModal.value = false
+}
 
 onMounted(async () => {
   if (!terminalEl.value) return
@@ -48,12 +106,21 @@ onMounted(async () => {
   // Initialize Xterm with Google Sans Code font family aligned with nio-de-app
   term = new Terminal({
     fontFamily: settingsStore.terminalFont,
-    fontSize: 12.5,
+    fontSize: settingsStore.terminalFontSize,
     lineHeight: 1.25,
-    cursorBlink: true,
-    cursorStyle: 'bar',
+    cursorBlink: settingsStore.cursorBlink,
+    cursorStyle: settingsStore.cursorStyle,
     theme: initialPalette,
     allowProposedApi: true,
+  })
+  
+  term.onSelectionChange(() => {
+    if (settingsStore.copyOnSelect && term!.hasSelection()) {
+      const text = term!.getSelection()
+      if (text) {
+        navigator.clipboard.writeText(text).catch(() => {})
+      }
+    }
   })
 
   fitAddon = new FitAddon()
@@ -65,11 +132,20 @@ onMounted(async () => {
 
   // Watch for theme and font changes and update terminal in real-time
   watch(
-    () => [settingsStore.theme, settingsStore.terminalTheme, settingsStore.terminalFont],
+    () => [
+      settingsStore.terminalTheme,
+      settingsStore.terminalFont,
+      settingsStore.terminalFontSize,
+      settingsStore.cursorStyle,
+      settingsStore.cursorBlink
+    ],
     () => {
       if (term) {
         term.options.theme = settingsStore.getActiveTerminalPalette()
         term.options.fontFamily = settingsStore.terminalFont
+        term.options.fontSize = settingsStore.terminalFontSize
+        term.options.cursorStyle = settingsStore.cursorStyle
+        term.options.cursorBlink = settingsStore.cursorBlink
         fitAddon?.fit()
       }
     }
@@ -98,7 +174,7 @@ onMounted(async () => {
   })
 
   // Wait for WS connection, then spawn PTY
-  const spawnPty = async () => {
+  spawnPty = async () => {
     const cols = term?.cols || 80
     const rows = term?.rows || 24
 
@@ -167,7 +243,7 @@ function handleFocus() {
     :class="[
       'flex flex-col h-full w-full rounded-md overflow-hidden transition-all border select-none',
       isFocused
-        ? 'border-primary ring-2 ring-primary/40 shadow-sm'
+        ? 'border-primary ring-1 ring-primary/30 shadow-sm'
         : 'border-border hover:border-border/80'
     ]"
     :style="{ backgroundColor: settingsStore.getActiveTerminalPalette().background }"
@@ -177,30 +253,42 @@ function handleFocus() {
       class="h-7 px-2.5 bg-card border-b border-border flex items-center justify-between text-xs shrink-0 select-none cursor-pointer"
       :class="{ 'bg-secondary/70': isFocused }"
     >
-      <div class="flex items-center gap-2 truncate">
+      <div class="flex items-center gap-2 truncate flex-1 pr-2">
         <!-- Index indicator -->
-        <span class="font-mono text-[10px] text-muted-foreground">#{{ index + 1 }}</span>
+        <span class="font-mono text-[10px] text-muted-foreground shrink-0">#{{ pane.sequenceId }}</span>
 
         <!-- Shell or Agent icon -->
-        <Bot v-if="pane.shell === 'nio'" class="w-3.5 h-3.5 text-[#008080] shrink-0" />
+        <Bot v-if="pane.shell === 'nio'" class="w-3.5 h-3.5 text-primary shrink-0" />
         <TerminalIcon v-else class="w-3.5 h-3.5 text-muted-foreground shrink-0" />
 
         <!-- Title -->
-        <span class="font-normal text-[11px] truncate text-foreground">{{ pane.title }}</span>
+        <span class="font-normal text-[11px] truncate text-foreground shrink-0">{{ pane.title }}</span>
 
         <!-- Agent Status Badges -->
         <template v-if="pane.shell === 'nio'">
-          <Badge variant="outline" class="text-[9px] px-1 py-0 h-3.5 border-[#008080]/40 text-[#008080] bg-[#008080]/10">
+          <Badge variant="outline" class="text-[9px] px-1 py-0 h-3.5 border-primary/40 text-primary bg-primary/10 shrink-0 hidden sm:inline-flex">
             NioAI
           </Badge>
-          <Badge variant="outline" class="text-[9px] px-1 py-0 h-3.5 text-muted-foreground">
-            {{ pane.agentMetadata?.mode || 'build' }}
-          </Badge>
         </template>
+        
+        <span class="text-[9.5px] text-muted-foreground font-mono truncate opacity-60 ml-1" :title="'Working Directory: ' + pane.cwd">
+          {{ pane.cwd }}
+        </span>
       </div>
 
       <!-- Action buttons -->
       <div class="flex items-center gap-1 shrink-0">
+        <!-- Change CWD -->
+        <Button
+          variant="ghost"
+          size="icon"
+          @click.stop="() => { cwdInput = pane.cwd || ''; showCwdModal = true }"
+          title="Change Working Directory (Restarts Pane)"
+          class="h-5 w-5 text-muted-foreground hover:text-foreground"
+        >
+          <FolderOpen class="w-3 h-3" />
+        </Button>
+
         <!-- Zoom Toggle -->
         <Button
           variant="ghost"
@@ -230,5 +318,60 @@ function handleFocus() {
     <div class="flex-1 w-full h-full min-h-0 relative">
       <div ref="terminalEl" class="absolute inset-0 w-full h-full"></div>
     </div>
+
+    <!-- Change Directory Modal -->
+    <Teleport to="body">
+      <div 
+        v-if="showCwdModal" 
+        class="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+        @mousedown.self="showCwdModal = false"
+      >
+        <div class="bg-card border border-border rounded-lg shadow-2xl max-w-sm w-full flex flex-col overflow-hidden">
+          <div class="p-4 flex flex-col gap-3">
+            <div class="text-sm font-medium text-foreground">Change Working Directory</div>
+            <div class="flex items-center gap-2">
+              <input
+                v-model="cwdInput"
+                @keydown.enter.prevent="fetchDirs(cwdInput)"
+                type="text"
+                class="flex-1 h-8 px-2.5 rounded-md border border-border bg-background text-foreground text-xs outline-none focus:border-primary font-mono"
+                placeholder="/path/to/folder"
+              />
+              <Button variant="outline" size="sm" class="h-8" @click="fetchDirs(cwdInput)">Go</Button>
+            </div>
+            <input
+              v-model="cwdFilter"
+              type="text"
+              class="w-full h-8 px-2.5 rounded-md border border-border bg-muted/30 text-foreground text-xs outline-none focus:border-primary"
+              placeholder="Search"
+              autofocus
+            />
+          </div>
+          <div class="h-48 overflow-y-auto border-t border-b border-border bg-muted/10 relative">
+            <div v-if="cwdLoading" class="absolute inset-0 flex items-center justify-center bg-background/50">
+              <span class="text-xs text-muted-foreground">Loading...</span>
+            </div>
+            <ul v-else-if="filteredDirs.length" class="py-1">
+              <li 
+                v-for="d in filteredDirs" 
+                :key="d"
+                @click="selectDir(d)"
+                class="px-4 py-1.5 text-xs text-foreground hover:bg-secondary cursor-pointer flex items-center gap-2"
+              >
+                <FolderOpen class="w-3.5 h-3.5 text-muted-foreground" />
+                <span :class="{'font-medium text-primary': d === '..'}">{{ d }}</span>
+              </li>
+            </ul>
+            <div v-else class="p-4 text-center text-xs text-muted-foreground">
+              No folders found
+            </div>
+          </div>
+          <div class="p-4 flex justify-end gap-2 bg-muted/20">
+            <Button variant="ghost" size="sm" @click="showCwdModal = false">Cancel</Button>
+            <Button variant="default" size="sm" @click="changeWorkingDirectory">Restart Pane Here</Button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>

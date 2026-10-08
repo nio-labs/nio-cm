@@ -8,29 +8,7 @@ export function useSpatialNav() {
     // Check for Alt shortcuts
     if (e.altKey && !e.ctrlKey && !e.metaKey) {
       if (e.shiftKey) {
-        // Alt + Shift + Arrows: SWAP PANES
-        if (e.key === 'ArrowUp') {
-          e.preventDefault()
-          gridStore.swapSpatial('up')
-          return
-        }
-        if (e.key === 'ArrowDown') {
-          e.preventDefault()
-          gridStore.swapSpatial('down')
-          return
-        }
-        if (e.key === 'ArrowLeft') {
-          e.preventDefault()
-          gridStore.swapSpatial('left')
-          return
-        }
-        if (e.key === 'ArrowRight') {
-          e.preventDefault()
-          gridStore.swapSpatial('right')
-          return
-        }
-      } else {
-        // Alt + Arrows: NAVIGATE FOCUS
+        // Alt + Shift + Arrows: NAVIGATE FOCUS
         if (e.key === 'ArrowUp') {
           e.preventDefault()
           gridStore.navigateSpatial('up')
@@ -49,6 +27,28 @@ export function useSpatialNav() {
         if (e.key === 'ArrowRight') {
           e.preventDefault()
           gridStore.navigateSpatial('right')
+          return
+        }
+      } else {
+        // Alt + Arrows: SWAP PANES
+        if (e.key === 'ArrowUp') {
+          e.preventDefault()
+          gridStore.swapSpatial('up')
+          return
+        }
+        if (e.key === 'ArrowDown') {
+          e.preventDefault()
+          gridStore.swapSpatial('down')
+          return
+        }
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault()
+          gridStore.swapSpatial('left')
+          return
+        }
+        if (e.key === 'ArrowRight') {
+          e.preventDefault()
+          gridStore.swapSpatial('right')
           return
         }
 

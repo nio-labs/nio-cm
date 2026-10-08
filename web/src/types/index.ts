@@ -10,6 +10,7 @@ export interface AgentMetadata {
 export interface TerminalPane {
   id: string
   sessionId: string // ID matched with backend PTY session
+  sequenceId: number
   title: string
   shell: string // "nio", "bash", "zsh", "sh"
   args?: string[]

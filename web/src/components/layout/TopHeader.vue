@@ -11,11 +11,8 @@ import {
   Plus,
   Maximize2,
   Minimize2,
-  Download,
   Keyboard,
   Settings,
-  Sun,
-  Moon,
   FolderOpen
 } from 'lucide-vue-next'
 
@@ -38,25 +35,6 @@ function saveEdit() {
     sessionStore.renameSession(sessionStore.activeSessionId, sessionNameInput.value.trim())
   }
   isEditingSession.value = false
-}
-
-// PWA install prompt handler
-const deferredPrompt = ref<any>(null)
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault()
-  deferredPrompt.value = e
-})
-
-async function installPWA() {
-  if (deferredPrompt.value) {
-    deferredPrompt.value.prompt()
-    const { outcome } = await deferredPrompt.value.userChoice
-    if (outcome === 'accepted') {
-      deferredPrompt.value = null
-    }
-  } else {
-    alert('NioCM is already running in desktop mode or your browser has installed it!')
-  }
 }
 </script>
 
@@ -104,21 +82,6 @@ async function installPWA() {
           />
         </template>
       </div>
-    </div>
-
-    <!-- Center: Pane status indicator -->
-    <div class="flex items-center gap-2 text-xs">
-      <Badge 
-        :variant="gridStore.activePanes.length >= MAX_PANES ? 'destructive' : 'secondary'"
-        class="font-mono text-[10px]"
-      >
-        {{ gridStore.activePanes.length }} / {{ MAX_PANES }} Panes
-      </Badge>
-
-      <span class="text-[11px] text-muted-foreground hidden md:inline-flex items-center gap-1 font-mono">
-        <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-        Alt+Arrows to Navigate
-      </span>
     </div>
 
     <!-- Right: Actions & Settings -->
@@ -172,17 +135,6 @@ async function installPWA() {
         <Keyboard class="w-3.5 h-3.5" />
       </Button>
 
-      <!-- Install PWA Button -->
-      <Button
-        variant="ghost"
-        size="sm"
-        @click="installPWA"
-        title="Install as Desktop App (PWA)"
-        class="h-7 px-2 text-xs text-muted-foreground hover:text-primary gap-1 hidden sm:inline-flex font-normal"
-      >
-        <Download class="w-3.5 h-3.5" />
-        <span class="text-[11px]">Install</span>
-      </Button>
     </div>
 
     <!-- Settings Modal -->
@@ -202,34 +154,10 @@ async function installPWA() {
           </div>
 
           <div class="space-y-4 text-xs">
-            <!-- App Theme Setting -->
-            <div class="space-y-1.5">
-              <label class="font-normal text-foreground">App Theme</label>
-              <div class="grid grid-cols-2 gap-2">
-                <Button
-                  :variant="settingsStore.theme === 'light' ? 'default' : 'outline'"
-                  size="sm"
-                  @click="settingsStore.setTheme('light')"
-                  class="justify-start gap-2 h-8"
-                >
-                  <Sun class="w-3.5 h-3.5" />
-                  <span>Light (Default)</span>
-                </Button>
-                <Button
-                  :variant="settingsStore.theme === 'dark' ? 'default' : 'outline'"
-                  size="sm"
-                  @click="settingsStore.setTheme('dark')"
-                  class="justify-start gap-2 h-8"
-                >
-                  <Moon class="w-3.5 h-3.5" />
-                  <span>Dark</span>
-                </Button>
-              </div>
-            </div>
 
-            <!-- Terminal Theme Setting -->
+    <!-- Terminal Theme Setting -->
             <div class="space-y-1.5">
-              <label class="font-normal text-foreground">Terminal Color Theme</label>
+              <label class="font-normal text-foreground">Terminal Theme</label>
               <select
                 :value="settingsStore.terminalTheme"
                 @change="settingsStore.setTerminalTheme(($event.target as HTMLSelectElement).value)"
@@ -262,6 +190,72 @@ async function installPWA() {
                 </option>
               </select>
             </div>
+
+            <!-- App & UI Scale -->
+            <div class="space-y-1.5 pt-2 border-t border-border">
+              <label class="font-normal text-foreground">App UI Scale</label>
+              <input 
+                type="range" 
+                min="0.75" 
+                max="1.5" 
+                step="0.05"
+                :value="settingsStore.uiScale"
+                @input="settingsStore.setUiScale(parseFloat(($event.target as HTMLInputElement).value))"
+                class="w-full"
+              />
+              <div class="text-[10px] text-muted-foreground text-right">{{ Math.round(settingsStore.uiScale * 100) }}%</div>
+            </div>
+
+            <!-- Terminal Font Size -->
+            <div class="space-y-1.5 pt-2 border-t border-border">
+              <label class="font-normal text-foreground">Terminal Font Size (px)</label>
+              <input 
+                type="number" 
+                min="8" 
+                max="32" 
+                step="0.5"
+                :value="settingsStore.terminalFontSize"
+                @input="settingsStore.setTerminalFontSize(parseFloat(($event.target as HTMLInputElement).value))"
+                class="w-full h-8 px-2.5 rounded-md border border-border bg-background text-foreground text-xs outline-none focus:border-primary"
+              />
+            </div>
+
+            <!-- Terminal Cursor Style -->
+            <div class="space-y-1.5 pt-2 border-t border-border">
+              <label class="font-normal text-foreground">Cursor Style</label>
+              <select
+                :value="settingsStore.cursorStyle"
+                @change="settingsStore.setCursorStyle(($event.target as HTMLSelectElement).value as 'block' | 'underline' | 'bar')"
+                class="w-full h-8 px-2.5 rounded-md border border-border bg-background text-foreground text-xs outline-none focus:border-primary"
+              >
+                <option value="block">Block</option>
+                <option value="underline">Underline</option>
+                <option value="bar">Bar</option>
+              </select>
+            </div>
+
+            <!-- Terminal Toggles -->
+            <div class="space-y-2 pt-2 border-t border-border">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  :checked="settingsStore.cursorBlink"
+                  @change="settingsStore.setCursorBlink(($event.target as HTMLInputElement).checked)"
+                  class="rounded border-border bg-background text-primary"
+                />
+                <span class="font-normal text-foreground">Blink Cursor</span>
+              </label>
+
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  :checked="settingsStore.copyOnSelect"
+                  @change="settingsStore.setCopyOnSelect(($event.target as HTMLInputElement).checked)"
+                  class="rounded border-border bg-background text-primary"
+                />
+                <span class="font-normal text-foreground">Copy on Select</span>
+              </label>
+            </div>
           </div>
 
           <div class="pt-2 flex justify-end">
@@ -289,11 +283,11 @@ async function installPWA() {
 
           <div class="space-y-2 text-xs">
             <div class="flex justify-between py-1 border-b border-border/50">
-              <span class="text-muted-foreground font-normal">Focus Spatial Neighbor</span>
+              <span class="text-muted-foreground font-normal">Swap Pane Position</span>
               <kbd class="px-1.5 py-0.5 bg-muted rounded text-[10px] font-normal">Alt + ↑ / ↓ / ← / →</kbd>
             </div>
             <div class="flex justify-between py-1 border-b border-border/50">
-              <span class="text-muted-foreground font-normal">Swap Pane Position</span>
+              <span class="text-muted-foreground font-normal">Focus Spatial Neighbor</span>
               <kbd class="px-1.5 py-0.5 bg-muted rounded text-[10px] font-normal">Alt + Shift + ↑ / ↓ / ← / →</kbd>
             </div>
             <div class="flex justify-between py-1 border-b border-border/50">
