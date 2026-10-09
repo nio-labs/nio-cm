@@ -6,6 +6,12 @@
 </p>
 
 <p align="center">
+  <a href="https://www.npmjs.com/package/@nio-labs/nio-cm"><img src="https://img.shields.io/npm/v/@nio-labs/nio-cm.svg?style=flat-square" alt="npm version"></a>
+  <a href="https://github.com/nio-labs/nio-cm/actions/workflows/ci.yml"><img src="https://github.com/nio-labs/nio-cm/actions/workflows/ci.yml/badge.svg" alt="CI Status"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License: MIT"></a>
+</p>
+
+<p align="center">
   <a href="https://railway.app/new/template?template=https%3A%2F%2Fgithub.com%2Fnio-labs%2Fnio-cm"><img src="https://railway.app/button.svg" alt="Deploy on Railway" height="30"></a>
   &nbsp;&nbsp;
   <a href="https://app.koyeb.com/deploy?type=git&repository=github.com/nio-labs/nio-cm&branch=main&name=nio-cm"><img src="https://www.koyeb.com/static/images/deploy/button.svg" alt="Deploy to Koyeb" height="30"></a>
@@ -23,27 +29,21 @@
 
 ---
 
-## Features
+## Supported Platforms
 
-- 🖥️ **Desktop PWA Shell**: Runs on `http://localhost:1422`, installable as a standalone application with an offline frontend.
-- 🪟 **10-Pane Spatial Grid**: Dynamic CSS Grid auto-scaling from 1 to 10 panes with hard limit enforcement.
-- ⌨️ **2D Spatial Navigation**:
-  - `Alt + ↑ / ↓ / ← / →`: Move focus across the 2D grid.
-  - `Alt + Shift + ↑ / ↓ / ← / →`: Swap active pane position with adjacent neighbor without restarting processes.
-  - `Alt + Z` or `Alt + Enter`: Zoom / Maximize active pane to 100%.
-  - `Alt + N`: Spawn new NioAI agent pane.
-  - `Alt + W`: Close active pane.
-  - `Alt + 1` … `Alt + 0`: Direct jump to pane 1 through 10.
-- 📁 **Session Management**: Left sidebar to organize project workspaces, inline renaming, and status indicators.
-- 🛡️ **Ecosystem Ready**: Aligned with `nio`, `nio-db`, `nio-js`, and `nio-guard`.
+| OS | Architectures | Method |
+|---|---|---|
+| **Linux** | `x86_64`, `aarch64` | `npx`, `curl` installer, Docker, Binary |
+| **macOS** | Apple Silicon (`aarch64`), Intel (`x86_64`) | `npx`, `curl` installer, Binary |
+| **Windows** | `x86_64` | `npx`, Binary (`.exe`) |
 
 ---
 
 ## Quick Start
 
-### 1. Instant Run with NPX
+### 1. Instant Run with NPX (Zero-Install)
 
-Run NioCM directly without installing:
+Run NioCM directly in any directory without installing:
 
 ```bash
 npx @nio-labs/nio-cm
@@ -51,12 +51,14 @@ npx @nio-labs/nio-cm
 npx niocm
 ```
 
-Or install globally:
+Or install globally via npm:
 
 ```bash
 npm install -g @nio-labs/nio-cm
 niocm
 ```
+
+Under the hood, `npx @nio-labs/nio-cm` auto-detects your OS/arch, downloads and verifies the native binary via SHA-256 checksums, caches it in `~/.niocm/bin`, and launches the daemon.
 
 ### 2. One-Line Native Installer (Linux & macOS)
 
@@ -96,7 +98,7 @@ cargo build --release --manifest-path server/Cargo.toml
 
 Visit **`http://localhost:1422`** in your browser, or click **Install** to add NioCM to your desktop.
 
-### 2. Development Mode (with HMR)
+### 6. Development Mode (with HMR)
 
 ```bash
 # Terminal 1: Backend daemon
@@ -107,7 +109,46 @@ cd web && pnpm dev
 ```
 Open **`http://localhost:5174`**.
 
-### Install NioCM as an app
+---
+
+## Configuration & CLI Options
+
+```
+USAGE:
+    niocm [OPTIONS]
+
+OPTIONS:
+    --port, -p <port>  Port to bind to (default: 1422 or PORT env)
+    --host, -H <host>  Host to bind to (default: 0.0.0.0 or HOST env)
+    --version, -V      Print version and exit
+    --help, -h         Print help information
+
+ENVIRONMENT:
+    PORT               Port to bind to (auto-detected on Railway & Koyeb)
+    HOST               Host to bind to (default: 0.0.0.0)
+    NIOCM_STATIC_DIR   Override static files directory
+    NIOCM_SERVER_BIN   Override native binary path (for npm wrapper)
+```
+
+---
+
+## Features & Shortcuts
+
+- 🖥️ **Desktop PWA Shell**: Runs on `http://localhost:1422`, installable as a standalone application with an offline frontend.
+- 🪟 **10-Pane Spatial Grid**: Dynamic CSS Grid auto-scaling from 1 to 10 panes with hard limit enforcement.
+- ⌨️ **2D Spatial Navigation**:
+  - `Alt + ↑ / ↓ / ← / →`: Move focus across the 2D grid.
+  - `Alt + Shift + ↑ / ↓ / ← / →`: Swap active pane position with adjacent neighbor without restarting processes.
+  - `Alt + Z` or `Alt + Enter`: Zoom / Maximize active pane to 100%.
+  - `Alt + N`: Spawn new NioAI agent pane.
+  - `Alt + W`: Close active pane.
+  - `Alt + 1` … `Alt + 0`: Direct jump to pane 1 through 10.
+- 📁 **Session Management**: Left sidebar to organize project workspaces, inline renaming, and status indicators.
+- 🛡️ **Ecosystem Ready**: Aligned with `nio`, `nio-db`, `nio-js`, and `nio-guard`.
+
+---
+
+## Install NioCM as a PWA Desktop App
 
 Build the frontend and open `http://localhost:1422`. In Settings → Desktop app,
 choose **Install NioCM** when your browser offers installation. You can also use
@@ -126,7 +167,8 @@ settings continue to use browser storage. Terminal processes still require the
 running NioCM daemon; the service worker does not cache WebSocket traffic or
 `/health` responses. Optional fonts from Google Fonts require an internet connection.
 
-New versions display an update prompt and can also be reviewed in Settings.
-Updates never reload an active workspace automatically. **Reload and update**
-stops active terminal processes and restores the saved pane layout, so finish or
-save terminal work before applying an update.
+---
+
+## License
+
+[MIT](LICENSE) © 2026 Nio Labs Team
