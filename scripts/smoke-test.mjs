@@ -22,11 +22,13 @@ const check = (name, ok, detail = '') => {
 
 function fetchHttp(path) {
   return new Promise((resolve, reject) => {
-    http.get(`http://127.0.0.1:${TEST_PORT}${path}`, (res) => {
+    const req = http.get(`http://127.0.0.1:${TEST_PORT}${path}`, (res) => {
       let data = '';
       res.on('data', (chunk) => data += chunk);
       res.on('end', () => resolve({ status: res.statusCode, body: data, headers: res.headers }));
+      res.on('error', reject);
     }).on('error', reject);
+    req.setTimeout(1000, () => req.destroy(new Error(`Request timed out: ${path}`)));
   });
 }
 
@@ -38,6 +40,8 @@ async function runTests() {
     const child = spawn(BIN, ['--version']);
     let out = '';
     child.stdout.on('data', (d) => out += d);
+    child.stderr.on('data', (d) => process.stderr.write(d));
+    child.on('error', (error) => resolve({ code: 1, out: error.message }));
     child.on('close', (code) => resolve({ code, out: out.trim() }));
   });
   check('Binary --version exits 0', verResult.code === 0, verResult.out);
@@ -50,46 +54,63 @@ async function runTests() {
     env: { ...process.env, PORT: String(TEST_PORT), HOST: '127.0.0.1' },
   });
 
+  // Register completion immediately, including exits during startup.
+  let exited = false;
+  let spawnError;
+  const closed = new Promise((resolve) => {
+    server.on('error', (error) => {
+      spawnError = error;
+      console.error(`[smoke-test] Could not launch daemon: ${error.message}`);
+    });
+    server.on('close', (code, signal) => {
+      exited = true;
+      resolve({ code, signal });
+    });
+  });
+  server.stdout.on('data', (d) => process.stdout.write(d));
   server.stderr.on('data', (d) => process.stderr.write(d));
 
-  // Wait for server to bind
-  let up = false;
-  for (let i = 0; i < 20; i++) {
-    await new Promise((r) => setTimeout(r, 200));
-    try {
-      const res = await fetchHttp('/health');
-      if (res.status === 200) {
-        up = true;
-        break;
-      }
-    } catch {}
-  }
-  check('Server started and bound to port', up);
+  try {
+    // Wait for server to bind
+    let up = false;
+    for (let i = 0; i < 50 && !exited; i++) {
+      await new Promise((r) => setTimeout(r, 200));
+      try {
+        const res = await fetchHttp('/health');
+        const health = JSON.parse(res.body);
+        if (!exited && res.status === 200 && health.status === 'ok' && health.app === 'NioCM') {
+          up = true;
+          break;
+        }
+      } catch {}
+    }
+    check('Server started and bound to port', up);
 
-  if (up) {
-    // Test 3: /health endpoint
-    const health = await fetchHttp('/health');
-    check('/health status is 200', health.status === 200);
-    const healthJson = JSON.parse(health.body);
-    check('/health JSON response valid', healthJson.status === 'ok' && healthJson.app === 'NioCM');
+    if (up) {
+      // Test 3: /health endpoint
+      const health = await fetchHttp('/health');
+      check('/health status is 200', health.status === 200);
+      const healthJson = JSON.parse(health.body);
+      check('/health JSON response valid', healthJson.status === 'ok' && healthJson.app === 'NioCM');
 
-    // Test 4: Web UI index.html served
-    const root = await fetchHttp('/');
-    check('/ root UI status is 200', root.status === 200);
-    check('/ root serves HTML', (root.headers['content-type'] || '').includes('text/html') || root.body.includes('<!DOCTYPE html>') || root.body.includes('NioCM'));
-  }
+      // Test 4: Web UI index.html served
+      const root = await fetchHttp('/');
+      check('/ root UI status is 200', root.status === 200);
+      check('/ root serves HTML', (root.headers['content-type'] || '').includes('text/html') || root.body.includes('<!DOCTYPE html>') || root.body.includes('NioCM'));
+    }
 
-  // Teardown
-  server.kill('SIGINT');
-  await new Promise((resolve) => {
-    server.on('close', resolve);
-    setTimeout(() => {
-      server.kill('SIGKILL');
-      resolve();
+  } finally {
+    // Always stop the child, even if an endpoint check throws.
+    const exitedBeforeShutdown = exited;
+    if (!exited) server.kill('SIGINT');
+    const killTimer = setTimeout(() => {
+      if (!exited) server.kill('SIGKILL');
     }, 2000);
-  });
-
-  check('Server exited cleanly', true);
+    const result = await closed;
+    clearTimeout(killTimer);
+    check('Server exited cleanly', !spawnError && !exitedBeforeShutdown && result.code === 0,
+      `code=${result.code}, signal=${result.signal || 'none'}`);
+  }
 
   console.log(`\nResults: ${failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`}`);
   process.exit(failures === 0 ? 0 : 1);

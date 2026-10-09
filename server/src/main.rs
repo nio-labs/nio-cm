@@ -91,7 +91,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         i += 1;
     }
 
-    nio_setup::ensure_nio_binary().await;
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -191,6 +190,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("└────────────────────────────────────────────────────────┘");
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
+    // Agent installation may need network access. Serve the UI and health
+    // endpoint while it runs so fresh installations can start immediately.
+    tokio::spawn(async {
+        nio_setup::ensure_nio_binary().await;
+    });
     axum::serve(listener, router).await?;
 
     Ok(())
