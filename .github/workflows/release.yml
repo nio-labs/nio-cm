@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     name: build ${{ matrix.target }}
@@ -102,6 +106,14 @@ jobs:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+      - name: Require a version tag
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          if [ "$REF_TYPE" != "tag" ] || [[ "$GITHUB_REF_NAME" != v* ]]; then
+            echo "::error::Run the release workflow on a version tag (for example, v0.2.0)."
+            exit 1
+          fi
       - uses: actions/download-artifact@v4
         with:
           path: dist
@@ -137,4 +149,4 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           npm version "$VERSION" --no-git-tag-version --allow-same-version
-          npm publish --access public
+          node scripts/publish-npm.mjs

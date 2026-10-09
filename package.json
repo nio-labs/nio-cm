@@ -1,6 +1,6 @@
 {
   "name": "@nio-labs/nio-cm",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "NioCM — The Agentic Terminal. Desktop PWA Terminal with multi-pane spatial grid powered by NioAI.",
   "main": "bin/nio-cm.js",
   "bin": {

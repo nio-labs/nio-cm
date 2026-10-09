@@ -169,6 +169,25 @@ running NioCM daemon; the service worker does not cache WebSocket traffic or
 
 ---
 
+## Publishing releases
+
+Push a version tag such as `v0.2.0` to run the release workflow. For a manual
+run, select an existing version tag. The workflow sets the npm package version
+from that tag; the npm launcher downloads binaries from the matching GitHub release.
+Set the repository's `NPM_TOKEN` secret to enable npm publishing.
+
+Reruns skip npm versions that are already published. If npm reports that the
+version is already staged, the workflow adds a warning and records the pending
+approval in its job summary. The package is **not installable until approved**.
+Sign in to npm as a package maintainer, review the upload in **Staged Packages**,
+and approve it. If the contents are wrong, reject the staged upload before retrying.
+See [npm's staged publishing documentation](https://docs.npmjs.com/cli/v11/commands/npm-stage/).
+
+To publish changed code after a version is public, use a new version tag, such as
+`v0.2.1`, so the npm version and GitHub binary release continue to match.
+
+---
+
 ## License
 
 [MIT](LICENSE) © 2026 Nio Labs Team
