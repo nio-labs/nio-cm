@@ -13,6 +13,7 @@ export const useGridStore = defineStore('grid', () => {
   const sessionPanes = ref<Record<string, TerminalPane[]>>({})
   const focusedPaneId = ref<string | null>(null)
   const zoomedPaneId = ref<string | null>(null)
+  const splitRatios = ref<Record<string, { columns: number[]; rows: number[] }>>({})
 
   // Restore pane layouts so each terminal is recreated when its workspace opens.
   try {
@@ -27,15 +28,26 @@ export const useGridStore = defineStore('grid', () => {
         )
       }
       focusedPaneId.value = typeof parsed.focusedPaneId === 'string' ? parsed.focusedPaneId : null
+      if (parsed.splitRatios && typeof parsed.splitRatios === 'object') {
+        splitRatios.value = Object.fromEntries(
+          Object.entries(parsed.splitRatios)
+            .filter(([, value]) => {
+              const sizes = value as { columns?: unknown; rows?: unknown }
+              return Array.isArray(sizes?.columns) && Array.isArray(sizes?.rows)
+            })
+            .map(([id, value]) => [id, value as { columns: number[]; rows: number[] }])
+        )
+      }
     }
   } catch {
     console.warn('Failed to parse saved terminal layouts from localStorage')
   }
 
-  watch([sessionPanes, focusedPaneId], () => {
+  watch([sessionPanes, focusedPaneId, splitRatios], () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       sessionPanes: sessionPanes.value,
       focusedPaneId: focusedPaneId.value,
+      splitRatios: splitRatios.value,
     }))
   }, { deep: true })
 
@@ -43,6 +55,9 @@ export const useGridStore = defineStore('grid', () => {
     const allowedIds = new Set(sessionIds)
     for (const id of Object.keys(sessionPanes.value)) {
       if (!allowedIds.has(id)) delete sessionPanes.value[id]
+    }
+    for (const id of Object.keys(splitRatios.value)) {
+      if (!allowedIds.has(id)) delete splitRatios.value[id]
     }
   })
 
@@ -59,6 +74,14 @@ export const useGridStore = defineStore('grid', () => {
       sessionPanes.value[sId] = val
     },
   })
+
+  const activeSplitRatio = computed(() => splitRatios.value[sessionStore.activeSessionId] || { columns: [], rows: [] })
+
+  function setSplitSizes(axis: 'columns' | 'rows', values: number[]) {
+    const sessionId = sessionStore.activeSessionId
+    const current = splitRatios.value[sessionId] || { columns: [], rows: [] }
+    splitRatios.value[sessionId] = { ...current, [axis]: values }
+  }
 
   const gridColumns = computed(() => {
     const count = activePanes.value.length
@@ -254,6 +277,8 @@ export const useGridStore = defineStore('grid', () => {
 
   return {
     activePanes,
+    activeSplitRatio,
+    setSplitSizes,
     gridColumns,
     focusedPaneId,
     zoomedPaneId,
