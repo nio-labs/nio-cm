@@ -97,7 +97,8 @@
 /* Xterm styling */
 .xterm {
   height: 100%;
-  padding: 6px 8px;
+  /* The 6px scrollbar completes the 8px right gutter. */
+  padding: 6px 2px 6px 8px;
 }
 
 .xterm .xterm-viewport {

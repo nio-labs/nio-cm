@@ -56,7 +56,14 @@ pub async fn handle_socket(socket: WebSocket, pty_manager: Arc<Mutex<PtyManager>
                     let sessions_ref = client_sessions.clone();
 
                     tokio::spawn(async move {
-                        let res = handle_command(req.command.as_str(), req.args, pty_ref, tx_ref.clone(), sessions_ref).await;
+                        let res = handle_command(
+                            req.command.as_str(),
+                            req.args,
+                            pty_ref,
+                            tx_ref.clone(),
+                            sessions_ref,
+                        )
+                        .await;
                         let reply = match res {
                             Ok(val) => WsReply {
                                 id: req.id,
@@ -105,6 +112,20 @@ pub async fn handle_socket(socket: WebSocket, pty_manager: Arc<Mutex<PtyManager>
     forward_task.abort();
 }
 
+fn process_cwd(pid: u32) -> Option<String> {
+    #[cfg(target_os = "linux")]
+    {
+        return std::fs::read_link(format!("/proc/{pid}/cwd"))
+            .ok()
+            .map(|path| path.to_string_lossy().into_owned());
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = pid;
+        None
+    }
+}
+
 async fn handle_command(
     cmd: &str,
     args: Option<Value>,
@@ -147,38 +168,61 @@ async fn handle_command(
 
             // Forward PTY output as events to client
             let sid_clone = session_id.clone();
+            let cwd_pid = res.pid;
             let tx_clone = client_tx.clone();
             tokio::spawn(async move {
-                while let Some(msg) = sub_rx.recv().await {
-                    match msg {
-                        SubMsg::Out { from, data } => {
-                            let text = String::from_utf8_lossy(&data).to_string();
-                            let ev = WsEvent {
-                                event: "pty_output".to_string(),
-                                payload: json!({
-                                    "sessionId": sid_clone,
-                                    "from": from,
-                                    "data": text
-                                }),
-                            };
-                            if let Ok(json_str) = serde_json::to_string(&ev) {
-                                if tx_clone.send(json_str).await.is_err() {
-                                    break;
+                let mut cwd_poll = tokio::time::interval(std::time::Duration::from_millis(350));
+                cwd_poll.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+                let mut last_cwd = process_cwd(cwd_pid);
+                loop {
+                    tokio::select! {
+                        _ = cwd_poll.tick() => {
+                            if let Some(cwd) = process_cwd(cwd_pid) {
+                                if last_cwd.as_deref() != Some(cwd.as_str()) {
+                                    last_cwd = Some(cwd.clone());
+                                    let ev = WsEvent {
+                                        event: "pty_cwd".to_string(),
+                                        payload: json!({"sessionId": sid_clone, "cwd": cwd}),
+                                    };
+                                    if let Ok(json_str) = serde_json::to_string(&ev) {
+                                        if tx_clone.send(json_str).await.is_err() { break; }
+                                    }
                                 }
                             }
                         }
-                        SubMsg::Exit { code } => {
-                            let ev = WsEvent {
-                                event: "pty_exit".to_string(),
-                                payload: json!({
-                                    "sessionId": sid_clone,
-                                    "code": code
-                                }),
-                            };
-                            if let Ok(json_str) = serde_json::to_string(&ev) {
-                                let _ = tx_clone.send(json_str).await;
+                        msg = sub_rx.recv() => {
+                            let Some(msg) = msg else { break; };
+                            match msg {
+                                SubMsg::Out { from, data } => {
+                                    let text = String::from_utf8_lossy(&data).to_string();
+                                    let ev = WsEvent {
+                                        event: "pty_output".to_string(),
+                                        payload: json!({
+                                            "sessionId": sid_clone,
+                                            "from": from,
+                                            "data": text
+                                        }),
+                                    };
+                                    if let Ok(json_str) = serde_json::to_string(&ev) {
+                                        if tx_clone.send(json_str).await.is_err() {
+                                            break;
+                                        }
+                                    }
+                                }
+                                SubMsg::Exit { code } => {
+                                    let ev = WsEvent {
+                                        event: "pty_exit".to_string(),
+                                        payload: json!({
+                                            "sessionId": sid_clone,
+                                            "code": code
+                                        }),
+                                    };
+                                    if let Ok(json_str) = serde_json::to_string(&ev) {
+                                        let _ = tx_clone.send(json_str).await;
+                                    }
+                                    break;
+                                }
                             }
-                            break;
                         }
                     }
                 }
@@ -230,7 +274,7 @@ async fn handle_command(
         "list_dirs" => {
             let path = args["path"].as_str().unwrap_or("/");
             let mut dirs = vec![];
-            
+
             if path != "/" {
                 dirs.push("..".to_string());
             }

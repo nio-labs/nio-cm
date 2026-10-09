@@ -164,6 +164,18 @@ export const useGridStore = defineStore('grid', () => {
     }
   }
 
+  function switchAgentPaneToShell(id: string) {
+    const pane = activePanes.value.find((item) => item.id === id)
+    if (!pane) return
+
+    pane.sessionId = `${id}-shell-${Date.now()}`
+    pane.shell = 'bash'
+    pane.args = undefined
+    pane.title = `Terminal #${pane.sequenceId}`
+    pane.status = 'idle'
+    pane.agentMetadata = undefined
+  }
+
   function toggleZoom(id?: string) {
     const targetId = id || focusedPaneId.value
     if (!targetId) return
@@ -286,6 +298,7 @@ export const useGridStore = defineStore('grid', () => {
     closePane,
     setFocused,
     updatePaneCwd,
+    switchAgentPaneToShell,
     toggleZoom,
     swapPanes,
     navigateSpatial,

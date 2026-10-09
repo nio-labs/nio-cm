@@ -26,6 +26,7 @@ export interface XtermTheme {
   brightMagenta: string
   brightCyan: string
   brightWhite: string
+  extendedAnsi?: string[]
 }
 
 // ── Dark themes ──────────────────────────────────────────────
@@ -917,7 +918,18 @@ const THEMES: Record<string, XtermTheme> = {
  * Get the xterm terminal theme for a given terminal theme setting.
  */
 export function getTerminalTheme(terminalThemeSetting: string): XtermTheme {
-  return THEMES[terminalThemeSetting] ?? THEMES['aurora-light']
+  const theme = THEMES[terminalThemeSetting] ?? THEMES['aurora-light']
+  const extendedAnsi = theme.extendedAnsi ?? []
+  return {
+    ...theme,
+    // Nio's startup panel uses ANSI 256 colors 16 and 17 so its background and
+    // foreground can be recolored in place when the user changes terminal theme.
+    extendedAnsi: [
+      isTerminalThemeDark(terminalThemeSetting) ? '#252833' : '#eeeeee',
+      isTerminalThemeDark(terminalThemeSetting) ? '#e6e6e6' : '#333333',
+      ...extendedAnsi.slice(2),
+    ],
+  }
 }
 
 const LIGHT_THEMES = [

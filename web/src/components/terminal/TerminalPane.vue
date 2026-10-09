@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
+import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
@@ -30,6 +30,8 @@ let fitAddon: FitAddon | null = null
 let resizeObserver: ResizeObserver | null = null
 let unbindOutput: (() => void) | null = null
 let unbindExit: (() => void) | null = null
+let unbindCwd: (() => void) | null = null
+let nioExitWasInterrupted = false
 let spawnPty: () => Promise<void> = async () => {}
 
 function fitTerminalAndNotifyPty() {
@@ -37,12 +39,43 @@ function fitTerminalAndNotifyPty() {
 
   try {
     fitAddon.fit()
+    // FitAddon reserves 15px for overlay scrollbars; our scrollbar is only 6px.
+    // Measure the rendered cells to reclaim the unused gutter without private xterm APIs.
+    const element = term.element
+    const screen = element?.querySelector<HTMLElement>('.xterm-screen')
+    const viewport = element?.querySelector<HTMLElement>('.xterm-viewport')
+    if (element && screen && viewport && terminalEl.value) {
+      const cellWidth = screen.getBoundingClientRect().width / term.cols
+      const padding = getComputedStyle(element)
+      const scrollbarWidth = viewport.offsetWidth - viewport.clientWidth
+        || parseFloat(getComputedStyle(viewport, '::-webkit-scrollbar').width) || 6
+      const availableWidth = terminalEl.value.clientWidth
+        - parseFloat(padding.paddingLeft) - parseFloat(padding.paddingRight) - scrollbarWidth
+      if (cellWidth > 0) {
+        term.resize(Math.max(2, Math.floor(availableWidth / cellWidth)), term.rows)
+      }
+    }
     ws.sendCommand('pty_resize', {
       sessionId: props.pane.sessionId,
       cols: term.cols,
       rows: term.rows,
     }).catch(() => {})
   } catch (_) {}
+}
+
+function matchNioHeaderToTerminalTheme(data: string): string {
+  const headerBackgrounds = [
+    '238;238;238', '35;36;49', '21;34;51', '25;39;31', '48;28;39',
+    '48;50;64', '55;61;73', '11;54;65', '48;49;43', '38;39;43',
+  ]
+
+  for (const color of headerBackgrounds) {
+    data = data.replaceAll(`\x1b[48;2;${color}m`, '\x1b[48;5;16m')
+  }
+  data = data
+    .replaceAll('\x1b[38;2;51;51;51m', '\x1b[38;5;17m')
+    .replaceAll('\x1b[38;2;230;230;230m', '\x1b[38;5;17m')
+  return data
 }
 
 const isFocused = computed(() => gridStore.focusedPaneId === props.pane.id)
@@ -191,22 +224,65 @@ onMounted(async () => {
 
   // Send keystrokes to backend PTY
   term.onData((data) => {
+    if (props.pane.shell === 'nio') {
+      if (data === '\x03') {
+        nioExitWasInterrupted = true
+      } else if (!data.includes('\x03') && data.length > 0) {
+        nioExitWasInterrupted = false
+      }
+    }
     ws.sendCommand('pty_write', {
       sessionId: props.pane.sessionId,
       data,
     }).catch((err) => console.error('pty_write error:', err))
   })
 
+  term.onKey(({ domEvent }) => {
+    if (
+      props.pane.shell === 'nio'
+      && domEvent.ctrlKey
+      && domEvent.key.toLowerCase() === 'c'
+    ) {
+      nioExitWasInterrupted = true
+    }
+  })
+
   // Listen for terminal output
   unbindOutput = ws.onEvent('pty_output', (payload) => {
     if (payload.sessionId === props.pane.sessionId && term) {
-      term.write(payload.data)
+      if (props.pane.shell === 'nio' && payload.data.includes('[interrupt] Stopping Nio.')) {
+        nioExitWasInterrupted = true
+      }
+      term.write(matchNioHeaderToTerminalTheme(payload.data))
+    }
+  })
+
+  // Keep the footer path in sync with shell built-ins such as `cd`.
+  unbindCwd = ws.onEvent('pty_cwd', (payload) => {
+    if (payload.sessionId === props.pane.sessionId && typeof payload.cwd === 'string') {
+      gridStore.updatePaneCwd(props.pane.id, payload.cwd)
     }
   })
 
   // Listen for exit
-  unbindExit = ws.onEvent('pty_exit', (payload) => {
+  unbindExit = ws.onEvent('pty_exit', async (payload) => {
     if (payload.sessionId === props.pane.sessionId && term) {
+      if (props.pane.shell === 'nio' && nioExitWasInterrupted) {
+        const exitedSessionId = payload.sessionId
+        nioExitWasInterrupted = false
+        try {
+          await ws.sendCommand('pty_kill', { sessionId: exitedSessionId })
+        } catch (_) {}
+        gridStore.switchAgentPaneToShell(props.pane.id)
+        term.reset()
+        await nextTick()
+        spawnPty()
+        return
+      }
+      if (props.pane.shell === 'nio' && payload.code === 0 && !nioExitWasInterrupted) {
+        gridStore.closePane(props.pane.id)
+        return
+      }
       term.write(`\r\n\x1b[90m[Process exited with code ${payload.code}]\x1b[0m\r\n`)
     }
   })
@@ -261,6 +337,7 @@ onUnmounted(() => {
   if (resizeObserver) resizeObserver.disconnect()
   if (unbindOutput) unbindOutput()
   if (unbindExit) unbindExit()
+  if (unbindCwd) unbindCwd()
   if (term) term.dispose()
 })
 
