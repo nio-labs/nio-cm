@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 import { useSessionStore } from '../../stores/sessionStore'
 import Button from '../ui/Button.vue'
 import {
@@ -16,9 +16,18 @@ const sessionStore = useSessionStore()
 const isCollapsed = ref(false)
 const editingId = ref<string | null>(null)
 const editName = ref('')
-function startEdit(id: string, currentName: string) {
+const editInput = ref<HTMLInputElement | null>(null)
+function setEditInput(element: unknown, id: string) {
+  if (id === editingId.value && element instanceof HTMLInputElement) {
+    editInput.value = element
+  }
+}
+async function startEdit(id: string, currentName: string) {
   editingId.value = id
   editName.value = currentName
+  await nextTick()
+  editInput.value?.focus()
+  editInput.value?.select()
 }
 
 function saveEdit() {
@@ -38,10 +47,10 @@ function saveEdit() {
   >
     <!-- Sessions Section -->
     <div class="p-2 space-y-3 overflow-y-auto flex-1 w-full flex flex-col" :class="isCollapsed ? 'items-center' : ''">
-      <div :class="['flex items-center justify-between', isCollapsed ? 'flex-col gap-2 px-0 pt-1' : 'px-2 pt-1']">
+      <div :class="['flex items-center justify-between border-b border-border pb-2 shrink-0', isCollapsed ? 'flex-col gap-2 px-0 pt-1 w-full' : 'border-x border-x-transparent pt-1']">
         <span 
           v-if="!isCollapsed" 
-          class="text-[11px] font-normal text-muted-foreground uppercase tracking-wider flex items-center gap-1.5"
+          class="text-[11px] font-normal text-muted-foreground uppercase tracking-wider flex items-center gap-2"
         >
           <FolderKanban class="w-3.5 h-3.5" />
           Sessions
@@ -61,7 +70,7 @@ function saveEdit() {
       <Button 
         v-if="!isCollapsed"
         variant="ghost" 
-        class="w-full justify-start gap-2 h-7 px-2.5 font-normal text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted/80 shrink-0"
+        class="w-full justify-start gap-2 h-7 px-2.5 font-normal border border-primary/20 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary dark:border-transparent dark:bg-muted/40 dark:text-muted-foreground dark:hover:bg-muted/80 dark:hover:text-foreground shrink-0"
         @click="sessionStore.createSession('Default Workspace')"
       >
         <Plus class="w-3.5 h-3.5" />
@@ -72,7 +81,7 @@ function saveEdit() {
         v-else
         variant="ghost" 
         size="icon"
-        class="w-8 h-8 rounded-full bg-muted/40 hover:bg-muted/80 text-muted-foreground hover:text-foreground shrink-0"
+        class="w-8 h-8 rounded-full border border-primary/20 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary dark:border-transparent dark:bg-muted/40 dark:text-muted-foreground dark:hover:bg-muted/80 dark:hover:text-foreground shrink-0"
         @click="sessionStore.createSession('Default Workspace')"
         title="New Workspace"
       >
@@ -80,39 +89,43 @@ function saveEdit() {
       </Button>
 
       <!-- Session list -->
-      <div :class="['space-y-0.5', isCollapsed ? 'flex flex-col items-center gap-2 mt-2 w-full' : '']">
+      <div :class="['space-y-0.5 pt-3 w-full', isCollapsed ? 'flex flex-col items-center gap-2' : '']">
         <div
           v-for="s in sessionStore.sessions"
           :key="s.id"
           @click="sessionStore.switchSession(s.id)"
+          @dblclick.stop="startEdit(s.id, s.name)"
           :class="[
             'group flex items-center justify-between rounded-md cursor-pointer transition-colors',
             isCollapsed ? 'py-3 px-1 w-8 justify-center flex-col' : 'px-2.5 py-1.5 w-full',
             sessionStore.activeSessionId === s.id
               ? 'bg-secondary text-foreground font-normal shadow-xs border border-border/80'
-              : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+              : 'border border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground'
           ]"
         >
           <div :class="['flex items-center gap-2', isCollapsed ? 'flex-col w-full' : 'truncate flex-1 pr-2']">
-            <span 
-              :class="[
-                'rounded-full shrink-0',
-                isCollapsed ? 'w-2 h-2 mb-1' : 'w-1.5 h-1.5',
-                sessionStore.activeSessionId === s.id ? 'bg-primary' : 'bg-muted-foreground/40'
-              ]"
-            ></span>
+            <span :class="['flex items-center justify-center shrink-0', isCollapsed ? 'w-2 h-2 mb-1' : 'w-3.5 h-3.5']">
+              <span
+                :class="[
+                  'rounded-full',
+                  isCollapsed ? 'w-2 h-2' : 'w-1.5 h-1.5',
+                  sessionStore.activeSessionId === s.id ? 'bg-primary' : 'bg-muted-foreground/40'
+                ]"
+              ></span>
+            </span>
 
             <template v-if="!isCollapsed">
               <input
                 v-if="editingId === s.id"
+                :ref="(element) => setEditInput(element, s.id)"
                 v-model="editName"
                 @blur="saveEdit"
                 @keyup.enter="saveEdit"
                 @click.stop
+                @dblclick.stop
                 class="h-5 px-1 bg-background border border-primary rounded text-[11px] outline-none w-full"
-                autoFocus
               />
-              <span v-else class="truncate" @dblclick.stop="startEdit(s.id, s.name)" title="Double click to rename">{{ s.name }}</span>
+              <span v-else class="truncate" title="Double click to rename">{{ s.name }}</span>
             </template>
             <template v-else>
               <span 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 import { useSessionStore } from '../../stores/sessionStore'
 import { useGridStore, MAX_PANES } from '../../stores/gridStore'
 import { useSettingsStore } from '../../stores/settingsStore'
@@ -22,12 +22,16 @@ const settingsStore = useSettingsStore()
 
 const isEditingSession = ref(false)
 const sessionNameInput = ref('')
+const sessionInput = ref<HTMLInputElement | null>(null)
 const showShortcutsModal = ref(false)
 const showSettingsModal = ref(false)
 
-function startEdit() {
+async function startEdit() {
   sessionNameInput.value = sessionStore.activeSession.name
   isEditingSession.value = true
+  await nextTick()
+  sessionInput.value?.focus()
+  sessionInput.value?.select()
 }
 
 function saveEdit() {
@@ -39,13 +43,13 @@ function saveEdit() {
 </script>
 
 <template>
-  <header class="h-11 border-b border-border bg-card/80 backdrop-blur px-3 flex items-center justify-between select-none shrink-0 z-30">
+  <header class="h-11 border-b border-border bg-card/80 backdrop-blur px-2 flex items-center justify-between select-none shrink-0 z-30">
     <!-- Left: Branding & Session info -->
     <div class="flex items-center gap-3">
       <div class="flex items-center gap-2 tracking-tight text-sm">
-        <div class="h-6 w-6 rounded-lg overflow-hidden flex items-center justify-center shadow-xs shrink-0">
+        <div class="h-6 w-6 rounded-sm overflow-hidden flex items-center justify-center shadow-xs shrink-0">
           <svg viewBox="0 0 2042 2042" class="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg" style="color-scheme: light dark;">
-            <rect width="2042" height="2042" rx="420" fill="#008080" style="fill: #008080 !important;" />
+            <rect width="2042" height="2042" rx="300" fill="#008080" style="fill: #008080 !important;" />
             <path d="M570 710L980 1021L570 1332" stroke="white" stroke-width="150" stroke-linecap="round" stroke-linejoin="round"/>
             <circle cx="1330" cy="1235" r="130" fill="white"/>
           </svg>
@@ -74,11 +78,11 @@ function saveEdit() {
         </template>
         <template v-else>
           <input
+            ref="sessionInput"
             v-model="sessionNameInput"
             @blur="saveEdit"
             @keyup.enter="saveEdit"
             class="h-6 px-1.5 bg-background border border-primary rounded text-xs outline-none w-36"
-            autoFocus
           />
         </template>
       </div>
