@@ -1,0 +1,9 @@
+node_modules
+target
+.git
+.github
+*.log
+dist
+web/node_modules
+web/dist
+web/tsconfig.tsbuildinfo

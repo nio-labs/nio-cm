@@ -5,6 +5,12 @@
   Built with Rust + Vue 3 + Shadcn-Vue + Xterm.js · Powered by NioAI
 </p>
 
+<p align="center">
+  <a href="https://railway.app/new/template?template=https%3A%2F%2Fgithub.com%2Fnio-labs%2Fnio-cm"><img src="https://railway.app/button.svg" alt="Deploy on Railway" height="30"></a>
+  &nbsp;&nbsp;
+  <a href="https://app.koyeb.com/deploy?type=git&repository=github.com/nio-labs/nio-cm&branch=main&name=nio-cm"><img src="https://www.koyeb.com/static/images/deploy/button.svg" alt="Deploy to Koyeb" height="30"></a>
+</p>
+
 ---
 
 ## Overview
@@ -35,14 +41,53 @@
 
 ## Quick Start
 
-### 1. Build & Run Standalone
+### 1. Instant Run with NPX
+
+Run NioCM directly without installing:
+
+```bash
+npx @nio-labs/nio-cm
+# or
+npx niocm
+```
+
+Or install globally:
+
+```bash
+npm install -g @nio-labs/nio-cm
+niocm
+```
+
+### 2. One-Line Native Installer (Linux & macOS)
+
+Downloads the pre-built native binary for your architecture, verifies SHA-256 checksums, and installs to `~/.local/bin`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nio-labs/nio-cm/main/install.sh | bash
+niocm
+```
+
+### 3. Docker
+
+```bash
+docker run -d \
+  -p 1422:1422 \
+  --name nio-cm \
+  ghcr.io/nio-labs/nio-cm:latest
+```
+
+### 4. 1-Click Cloud Deploy
+
+Deploy your personal remote Agentic Terminal in seconds:
+
+- **Railway**: Click the [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https%3A%2F%2Fgithub.com%2Fnio-labs%2Fnio-cm) button. Automatic Dockerfile detection with port mapping and `/health` probes.
+- **Koyeb**: Click the [![Deploy to Koyeb](https://www.koyeb.com/static/images/deploy/button.svg)](https://app.koyeb.com/deploy?type=git&repository=github.com/nio-labs/nio-cm&branch=main&name=nio-cm) button or deploy using `koyeb.yaml`.
+
+### 5. Build & Run from Source
 
 ```bash
 # Build frontend
-cd web
-pnpm install
-pnpm run build
-cd ..
+cd web && pnpm install && pnpm run build && cd ..
 
 # Build & run Rust daemon
 cargo build --release --manifest-path server/Cargo.toml

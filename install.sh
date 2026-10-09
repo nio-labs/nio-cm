@@ -1,0 +1,213 @@
+#!/bin/sh
+# NioCM installer
+#
+# Downloads niocm binary for your OS/arch from the latest GitHub release,
+# verifies its SHA-256 checksum, and installs it.
+# Re-running the script upgrades to the newest version.
+#
+# Usage:
+#   curl -fsSL https://raw.githubusercontent.com/nio-labs/nio-cm/main/install.sh | bash
+#
+# Options:
+#   VERSION=x.y.z bash install.sh          Install a specific version (default: latest)
+#   bash install.sh --dry-run              Print what would happen, change nothing
+#   bash install.sh --force                Reinstall even when the version matches
+#
+# Environment:
+#   NIOCM_INSTALL_DIR                     Install directory (default ~/.local/bin, or
+#                                         /usr/local/bin when run as root)
+
+set -eu
+
+REPO="nio-labs/nio-cm"
+DRY_RUN=0
+FORCE=0
+
+usage() {
+  echo "Usage: bash install.sh [--dry-run] [--force]"
+  echo "       VERSION=x.y.z bash install.sh [--dry-run] [--force]"
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) DRY_RUN=1 ;;
+    --force) FORCE=1 ;;
+    -h | --help) usage; exit 0 ;;
+    *) echo "unknown option: $arg" >&2; usage >&2; exit 1 ;;
+  esac
+done
+
+# --- Detect OS / arch ----------------------------------------------------------
+
+OS="$(uname -s 2>/dev/null || echo unknown)"
+ARCH="$(uname -m 2>/dev/null || echo unknown)"
+
+case "$OS" in
+  Linux) OS_SUFFIX="linux" ;;
+  Darwin) OS_SUFFIX="darwin" ;;
+  *)
+    echo "error: unsupported OS '$OS'. NioCM supports Linux and macOS." >&2
+    exit 1
+    ;;
+esac
+
+case "$ARCH" in
+  x86_64 | amd64) ARCH_SUFFIX="x86_64" ;;
+  aarch64 | arm64) ARCH_SUFFIX="aarch64" ;;
+  *)
+    echo "error: unsupported architecture '$ARCH'. Supported: x86_64, aarch64." >&2
+    exit 1
+    ;;
+esac
+
+SUFFIX="${OS_SUFFIX}-${ARCH_SUFFIX}"
+
+if ! command -v curl >/dev/null 2>&1; then
+  echo "error: curl is required to install NioCM" >&2
+  exit 1
+fi
+
+# --- Resolve version -----------------------------------------------------------
+
+if [ -z "${VERSION:-}" ]; then
+  echo "Fetching the latest NioCM release…" >&2
+  TAG="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" |
+    sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)"
+  if [ -z "$TAG" ]; then
+    echo "error: could not determine the latest release from GitHub." >&2
+    echo "       Set VERSION=x.y.z to install a specific version." >&2
+    exit 1
+  fi
+else
+  case "$VERSION" in
+    v*) TAG="$VERSION" ;;
+    *) TAG="v${VERSION}" ;;
+  esac
+fi
+
+BASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
+
+# --- Install directory ----------------------------------------------------------
+
+if [ "$(id -u)" -eq 0 ]; then
+  INSTALL_DIR="${NIOCM_INSTALL_DIR:-/usr/local/bin}"
+else
+  INSTALL_DIR="${NIOCM_INSTALL_DIR:-${HOME}/.local/bin}"
+fi
+
+# --- Download + verify + install helper ----------------------------------------
+
+install_binary() {
+  local BIN_NAME="$1"
+  local ASSET="${BIN_NAME}-${SUFFIX}"
+  local DEST="${INSTALL_DIR}/${BIN_NAME}"
+
+  echo "${BIN_NAME} ${TAG} (${SUFFIX}) → ${DEST}" >&2
+  echo "  download: ${BASE_URL}/${ASSET}" >&2
+  echo "  checksum: ${BASE_URL}/SHA256SUMS" >&2
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "(dry run — nothing installed)" >&2
+    return 0
+  fi
+
+  mkdir -p "$INSTALL_DIR"
+
+  # No-op upgrade when the installed version already matches (unless --force).
+  if [ "$FORCE" -eq 0 ] && [ -x "$DEST" ] && "$DEST" --version 2>/dev/null | grep -q " ${TAG#v}"; then
+    echo "${BIN_NAME} ${TAG#v} is already installed at ${DEST}." >&2
+    echo "Re-run with --force to reinstall." >&2
+    return 0
+  fi
+
+  local TMP_DIR
+  TMP_DIR="$(mktemp -d)"
+  trap 'rm -rf "$TMP_DIR"' EXIT
+
+  echo "Verifying SHA-256 checksum…" >&2
+  curl -fsSL "${BASE_URL}/SHA256SUMS" -o "${TMP_DIR}/SHA256SUMS"
+  local EXPECTED
+  EXPECTED="$(awk -v a="${ASSET}" '$2 == a || $2 == ("*" a) { print $1; exit }' "${TMP_DIR}/SHA256SUMS")"
+
+  if [ -z "$EXPECTED" ]; then
+    echo "error: no checksum found for ${ASSET} in the release's SHA256SUMS." >&2
+    exit 1
+  fi
+
+  curl -fsSL "${BASE_URL}/${ASSET}" -o "${TMP_DIR}/${ASSET}"
+
+  local ACTUAL
+  if command -v sha256sum >/dev/null 2>&1; then
+    ACTUAL="$(sha256sum "${TMP_DIR}/${ASSET}" | awk '{print $1}')"
+  else
+    ACTUAL="$(shasum -a 256 "${TMP_DIR}/${ASSET}" | awk '{print $1}')"
+  fi
+
+  if [ "$ACTUAL" != "$EXPECTED" ]; then
+    echo "error: checksum mismatch for ${ASSET}." >&2
+    echo "  expected: ${EXPECTED}" >&2
+    echo "  actual:   ${ACTUAL}" >&2
+    echo "  Refusing to install. Re-run to retry (may be a transient error)." >&2
+    exit 1
+  fi
+
+  install -m 0755 "${TMP_DIR}/${ASSET}" "$DEST"
+  # Also create symlink nio-cm -> niocm
+  ln -sf "$DEST" "${INSTALL_DIR}/nio-cm"
+  echo "Installed ${BIN_NAME} ${TAG#v} to ${DEST}" >&2
+}
+
+install_binary "niocm"
+
+# --- Bundle NioAI agent (mandatory for AI chat & terminal intelligence) --------
+
+install_nio() {
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "Would check and install NioAI agent (@nio-labs/nio-ai)..." >&2
+    return 0
+  fi
+
+  echo "Checking NioAI agent (@nio-labs/nio-ai)..." >&2
+  if command -v nio >/dev/null 2>&1; then
+    echo "NioAI is already installed ($(command -v nio))" >&2
+    return 0
+  fi
+
+  echo "Installing NioAI agent (@nio-labs/nio-ai)..." >&2
+  local INSTALLED=0
+  if command -v npm >/dev/null 2>&1; then
+    echo "Attempting install via npm (npm install -g @nio-labs/nio-ai)..." >&2
+    if npm install -g @nio-labs/nio-ai >/dev/null 2>&1; then
+      INSTALLED=1
+      echo "Installed @nio-labs/nio-ai via npm" >&2
+    fi
+  fi
+
+  if [ "$INSTALLED" -eq 0 ]; then
+    echo "Attempting install via native installer (curl)..." >&2
+    if curl -fsSL https://raw.githubusercontent.com/nio-labs/nio/main/install.sh | bash; then
+      INSTALLED=1
+      echo "Installed nio via native installer" >&2
+    else
+      echo "warning: could not automatically install @nio-labs/nio-ai. You can install it later with: npx @nio-labs/nio-ai" >&2
+    fi
+  fi
+}
+
+install_nio
+
+# --- Post-install notes --------------------------------------------------------
+
+case ":$PATH:" in
+  *":${INSTALL_DIR}:"*) : ;;
+  *) echo "note: ${INSTALL_DIR} is not on your PATH." >&2
+     echo "     Add it, e.g.:  export PATH=\"${INSTALL_DIR}:\$PATH\"" >&2 ;;
+esac
+
+echo >&2
+echo "Start NioCM with:      ${INSTALL_DIR}/niocm (or nio-cm)" >&2
+echo "Open in browser:       http://localhost:1422" >&2
+if command -v nio >/dev/null 2>&1; then
+  echo "NioAI agent bundled:   $(command -v nio)" >&2
+fi
+echo "Re-run this installer any time to upgrade." >&2

@@ -29,10 +29,7 @@ pub enum SubMsg {
 }
 
 enum Ctrl {
-    Subscribe {
-        tx: mpsc::Sender<SubMsg>,
-        from: u64,
-    },
+    Subscribe { tx: mpsc::Sender<SubMsg>, from: u64 },
     Unsubscribe,
 }
 
@@ -154,7 +151,11 @@ impl PtyManager {
 
         if let Some(dir) = cwd.as_deref() {
             let expanded_dir = if dir.starts_with('~') {
-                let home_env = if cfg!(windows) { std::env::var("USERPROFILE") } else { std::env::var("HOME") };
+                let home_env = if cfg!(windows) {
+                    std::env::var("USERPROFILE")
+                } else {
+                    std::env::var("HOME")
+                };
                 if let Ok(home) = home_env {
                     dir.replacen('~', &home, 1)
                 } else {
@@ -353,12 +354,7 @@ impl PtyManager {
         let (pid, from_actual, end, truncated) = {
             let st = session.state.lock().unwrap();
             let from_actual = st.ring_start().max(from);
-            (
-                session.pid,
-                from_actual,
-                st.total,
-                from < st.ring_start(),
-            )
+            (session.pid, from_actual, st.total, from < st.ring_start())
         };
         session
             .ctrl

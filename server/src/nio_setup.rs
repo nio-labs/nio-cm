@@ -67,7 +67,7 @@ pub async fn ensure_nio_binary() -> Option<PathBuf> {
                 .stderr(std::process::Stdio::null())
                 .status()
                 .await;
-            
+
             if let Ok(status) = result {
                 if status.success() {
                     if let Some(bin) = find_nio_binary() {
@@ -82,12 +82,19 @@ pub async fn ensure_nio_binary() -> Option<PathBuf> {
     println!("[nio-cm] Installing nio via official installer...");
     if cfg!(windows) {
         let _ = tokio::process::Command::new("powershell")
-            .args(["-NoProfile", "-Command", "irm https://raw.githubusercontent.com/nio-labs/nio/main/install.ps1 | iex"])
+            .args([
+                "-NoProfile",
+                "-Command",
+                "irm https://raw.githubusercontent.com/nio-labs/nio/main/install.ps1 | iex",
+            ])
             .status()
             .await;
     } else {
         let _ = tokio::process::Command::new("sh")
-            .args(["-c", "curl -fsSL https://raw.githubusercontent.com/nio-labs/nio/main/install.sh | bash"])
+            .args([
+                "-c",
+                "curl -fsSL https://raw.githubusercontent.com/nio-labs/nio/main/install.sh | bash",
+            ])
             .status()
             .await;
     }
@@ -98,6 +105,6 @@ pub async fn ensure_nio_binary() -> Option<PathBuf> {
 
     eprintln!("[nio-cm] Warning: Could not automatically bundle @nio-labs/nio-ai");
     eprintln!("[nio-cm] You can install it manually with: npx @nio-labs/nio-ai");
-    
+
     None
 }

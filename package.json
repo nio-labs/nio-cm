@@ -2,26 +2,51 @@
   "name": "@nio-labs/nio-cm",
   "version": "0.1.0",
   "description": "NioCM — The Agentic Terminal. Desktop PWA Terminal with multi-pane spatial grid powered by NioAI.",
-  "type": "module",
+  "main": "bin/nio-cm.js",
+  "bin": {
+    "nio-cm": "bin/nio-cm.js",
+    "niocm": "bin/nio-cm.js"
+  },
   "scripts": {
+    "start": "node ./bin/nio-cm.js",
     "dev:web": "cd web && pnpm dev",
     "dev:server": "cargo run --manifest-path server/Cargo.toml",
     "build:web": "cd web && pnpm build",
     "build:server": "cargo build --release --manifest-path server/Cargo.toml",
-    "build": "pnpm build:web && pnpm build:server",
-    "start": "./target/release/niocm"
+    "build": "pnpm build:web && pnpm build:server"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nio-labs/nio-cm.git"
   },
   "keywords": [
+    "niocm",
+    "nio-cm",
     "terminal",
     "agentic-terminal",
+    "pty",
     "xterm",
     "nio",
     "nio-ai",
     "shadcn",
     "vue3",
-    "rust",
-    "pty"
+    "rust"
   ],
   "author": "Nio Labs Team",
-  "license": "MIT"
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/nio-labs/nio-cm/issues"
+  },
+  "homepage": "https://github.com/nio-labs/nio-cm#readme",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "bin",
+    "README.md",
+    "LICENSE"
+  ]
 }

@@ -1,0 +1,26 @@
+name: nio-cm
+services:
+  - name: nio-cm
+    type: web
+    routes:
+      - path: /
+        port: 1422
+    regions:
+      - fra
+    ports:
+      - port: 1422
+        protocol: http
+    scalings:
+      - min: 1
+        max: 1
+    health_checks:
+      - http:
+          path: /health
+          port: 1422
+        interval: 10
+        timeout: 5
+        healthy_threshold: 1
+        unhealthy_threshold: 3
+    env:
+      - key: PORT
+        value: "1422"

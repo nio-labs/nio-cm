@@ -38,7 +38,7 @@ pub async fn handle_socket(socket: WebSocket, pty_manager: Arc<Mutex<PtyManager>
     // Forwarding task: rx -> ws_sender
     let forward_task = tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
-            if ws_sender.send(Message::Text(msg.into())).await.is_err() {
+            if ws_sender.send(Message::Text(msg)).await.is_err() {
                 break;
             }
         }
@@ -115,9 +115,9 @@ pub async fn handle_socket(socket: WebSocket, pty_manager: Arc<Mutex<PtyManager>
 fn process_cwd(pid: u32) -> Option<String> {
     #[cfg(target_os = "linux")]
     {
-        return std::fs::read_link(format!("/proc/{pid}/cwd"))
+        std::fs::read_link(format!("/proc/{pid}/cwd"))
             .ok()
-            .map(|path| path.to_string_lossy().into_owned());
+            .map(|path| path.to_string_lossy().into_owned())
     }
     #[cfg(not(target_os = "linux"))]
     {

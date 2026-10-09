@@ -1,0 +1,138 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-x86_64
+          - os: ubuntu-24.04-arm
+            target: linux-aarch64
+          - os: macos-15
+            target: darwin-aarch64
+          - os: macos-15
+            target: darwin-x86_64
+          - os: windows-latest
+            target: windows-x86_64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+      - name: Build Web Frontend
+        run: |
+          cd web
+          pnpm install --frozen-lockfile || pnpm install
+          pnpm build
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build Rust Daemon (release)
+        run: |
+          if [ "${{ matrix.target }}" = "darwin-x86_64" ]; then
+            rustup target add x86_64-apple-darwin
+            cargo build --release --locked --bin niocm --target x86_64-apple-darwin
+          else
+            cargo build --release --locked --bin niocm
+          fi
+      - name: Package binaries
+        run: |
+          EXT=""
+          if [ "${{ matrix.target }}" = "windows-x86_64" ]; then
+            EXT=".exe"
+          fi
+          DIR="target/release"
+          if [ "${{ matrix.target }}" = "darwin-x86_64" ]; then
+            DIR="target/x86_64-apple-darwin/release"
+          fi
+          cp "$DIR/niocm$EXT" "niocm-${{ matrix.target }}$EXT"
+          cp "$DIR/niocm$EXT" "nio-cm-${{ matrix.target }}$EXT"
+          chmod +x "niocm-${{ matrix.target }}$EXT" "nio-cm-${{ matrix.target }}$EXT"
+      - name: Smoke test niocm
+        if: runner.os == 'Linux'
+        run: node scripts/smoke-test.mjs "./niocm-${{ matrix.target }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: |
+            niocm-${{ matrix.target }}${{ matrix.target == 'windows-x86_64' && '.exe' || '' }}
+            nio-cm-${{ matrix.target }}${{ matrix.target == 'windows-x86_64' && '.exe' || '' }}
+          if-no-files-found: error
+
+  checksums:
+    name: checksums
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Generate SHA256SUMS
+        working-directory: artifacts
+        run: sha256sum niocm-* nio-cm-* | tee SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: checksums
+          path: artifacts/SHA256SUMS
+          if-no-files-found: error
+
+  publish:
+    name: publish release
+    needs: checksums
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Verify all binaries present
+        working-directory: dist
+        run: |
+          test -f SHA256SUMS
+          for BIN in niocm nio-cm; do
+            for t in linux-x86_64 linux-aarch64 darwin-x86_64 darwin-aarch64; do
+              test -f "$BIN-$t" || { echo "missing $BIN-$t" >&2; exit 1; }
+            done
+            test -f "$BIN-windows-x86_64.exe" || { echo "missing $BIN-windows-x86_64.exe" >&2; exit 1; }
+          done
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+
+      - name: Setup Node for npm publish
+        if: ${{ env.NPM_TOKEN != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org'
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to npm
+        if: ${{ env.NPM_TOKEN != '' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+          npm publish --access public
