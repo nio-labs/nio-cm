@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
+import { Unicode11Addon } from '@xterm/addon-unicode11'
 import '@xterm/xterm/css/xterm.css'
 import type { TerminalPane } from '../../types'
 import { useGridStore } from '../../stores/gridStore'
@@ -35,6 +36,19 @@ let resizeObserver: ResizeObserver | null = null
 let unbindOutput: (() => void) | null = null
 let unbindExit: (() => void) | null = null
 let spawnPty: () => Promise<void> = async () => {}
+
+function fitTerminalAndNotifyPty() {
+  if (!fitAddon || !term) return
+
+  try {
+    fitAddon.fit()
+    ws.sendCommand('pty_resize', {
+      sessionId: props.pane.sessionId,
+      cols: term.cols,
+      rows: term.rows,
+    }).catch(() => {})
+  } catch (_) {}
+}
 
 const isFocused = computed(() => gridStore.focusedPaneId === props.pane.id)
 const isZoomed = computed(() => gridStore.zoomedPaneId === props.pane.id)
@@ -126,9 +140,12 @@ onMounted(async () => {
   fitAddon = new FitAddon()
   term.loadAddon(fitAddon)
   term.loadAddon(new WebLinksAddon())
+  term.loadAddon(new Unicode11Addon())
+  term.unicode.activeVersion = '11'
 
   term.open(terminalEl.value)
   fitAddon.fit()
+  const initialFontsReady = document.fonts.ready.then(fitTerminalAndNotifyPty)
 
   // Watch for theme and font changes and update terminal in real-time
   watch(
@@ -146,7 +163,8 @@ onMounted(async () => {
         term.options.fontSize = settingsStore.terminalFontSize
         term.options.cursorStyle = settingsStore.cursorStyle
         term.options.cursorBlink = settingsStore.cursorBlink
-        fitAddon?.fit()
+        document.fonts.load(`${settingsStore.terminalFontSize}px "${settingsStore.terminalFont}"`)
+          .then(fitTerminalAndNotifyPty)
       }
     }
   )
@@ -175,6 +193,7 @@ onMounted(async () => {
 
   // Wait for WS connection, then spawn PTY
   spawnPty = async () => {
+    await initialFontsReady
     const cols = term?.cols || 80
     const rows = term?.rows || 24
 
@@ -209,14 +228,7 @@ onMounted(async () => {
     clearTimeout(resizeTimer)
     resizeTimer = setTimeout(() => {
       if (fitAddon && term) {
-        try {
-          fitAddon.fit()
-          ws.sendCommand('pty_resize', {
-            sessionId: props.pane.sessionId,
-            cols: term.cols,
-            rows: term.rows,
-          }).catch(() => {})
-        } catch (_) {}
+        fitTerminalAndNotifyPty()
       }
     }, 60)
   })
@@ -271,7 +283,7 @@ function handleFocus() {
           </Badge>
         </template>
         
-        <span class="text-[9.5px] text-muted-foreground font-mono truncate opacity-60 ml-1" :title="'Working Directory: ' + pane.cwd">
+        <span class="inline-flex h-3.5 min-w-0 items-center rounded-full border border-border/70 bg-muted/50 px-1.5 py-0 text-[9px] leading-none text-muted-foreground font-mono truncate ml-0.5" :title="'Working Directory: ' + pane.cwd">
           {{ pane.cwd }}
         </span>
       </div>

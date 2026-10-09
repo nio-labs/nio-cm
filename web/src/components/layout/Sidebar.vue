@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { nextTick, ref } from 'vue'
+import { nextTick, ref, watch } from 'vue'
 import { useSessionStore } from '../../stores/sessionStore'
 import Button from '../ui/Button.vue'
+import { MAX_WORKSPACES } from '../../stores/sessionStore'
 import {
   FolderKanban,
   Plus,
@@ -13,7 +14,10 @@ import {
 
 const sessionStore = useSessionStore()
 
-const isCollapsed = ref(false)
+const isCollapsed = ref(localStorage.getItem('niocm_sidebar_collapsed') === 'true')
+watch(isCollapsed, (collapsed) => {
+  localStorage.setItem('niocm_sidebar_collapsed', String(collapsed))
+})
 const editingId = ref<string | null>(null)
 const editName = ref('')
 const editInput = ref<HTMLInputElement | null>(null)
@@ -46,46 +50,46 @@ function saveEdit() {
     ]"
   >
     <!-- Sessions Section -->
-    <div class="p-2 space-y-3 overflow-y-auto flex-1 w-full flex flex-col" :class="isCollapsed ? 'items-center' : ''">
+    <div
+      class="p-2 space-y-3 flex-1 w-full flex flex-col"
+      :class="isCollapsed ? 'items-center overflow-hidden' : 'overflow-y-auto overflow-x-hidden'"
+    >
       <div :class="['flex items-center justify-between border-b border-border pb-2 shrink-0', isCollapsed ? 'flex-col gap-2 px-0 pt-1 w-full' : 'border-x border-x-transparent pt-1']">
         <span 
           v-if="!isCollapsed" 
-          class="text-[11px] font-normal text-muted-foreground uppercase tracking-wider flex items-center gap-2"
+          class="text-[10px] font-medium text-muted-foreground uppercase tracking-[0.14em] flex items-center gap-2"
         >
-          <FolderKanban class="w-3.5 h-3.5" />
-          Sessions
+          <span class="w-6 h-6 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+            <FolderKanban class="w-3.5 h-3.5" />
+          </span>
+          Workspaces
         </span>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          @click="isCollapsed = !isCollapsed"
-          class="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
-          :title="isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'"
-        >
-          <PanelLeftOpen v-if="isCollapsed" class="w-4 h-4" />
-          <PanelLeftClose v-else class="w-4 h-4" />
-        </Button>
+        <div class="flex items-center gap-1 shrink-0">
+          <Button
+            v-if="!isCollapsed"
+            variant="ghost"
+            size="sm"
+            @click.stop="sessionStore.createSession('Default Workspace')"
+            :disabled="sessionStore.sessions.length >= MAX_WORKSPACES"
+            class="h-6 px-2 rounded-full border border-primary/20 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary text-[10px] gap-1 shrink-0"
+            :title="sessionStore.sessions.length >= MAX_WORKSPACES ? `Workspace limit reached (${MAX_WORKSPACES})` : 'New Workspace'"
+          >
+            <Plus class="w-3 h-3" />
+            New
+          </Button>
+        </div>
       </div>
 
       <Button 
-        v-if="!isCollapsed"
-        variant="ghost" 
-        class="w-full justify-start gap-2 h-7 px-2.5 font-normal border border-primary/20 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary dark:border-transparent dark:bg-muted/40 dark:text-muted-foreground dark:hover:bg-muted/80 dark:hover:text-foreground shrink-0"
-        @click="sessionStore.createSession('Default Workspace')"
-      >
-        <Plus class="w-3.5 h-3.5" />
-        New Workspace
-      </Button>
-      
-      <Button 
-        v-else
-        variant="ghost" 
+        v-if="isCollapsed"
+        variant="ghost"
         size="icon"
-        class="w-8 h-8 rounded-full border border-primary/20 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary dark:border-transparent dark:bg-muted/40 dark:text-muted-foreground dark:hover:bg-muted/80 dark:hover:text-foreground shrink-0"
+        class="w-8 h-8 rounded-full text-primary hover:bg-primary/10 hover:text-primary shrink-0"
         @click="sessionStore.createSession('Default Workspace')"
-        title="New Workspace"
+        :disabled="sessionStore.sessions.length >= MAX_WORKSPACES"
+        :title="sessionStore.sessions.length >= MAX_WORKSPACES ? `Workspace limit reached (${MAX_WORKSPACES})` : 'New Workspace'"
       >
-        <Plus class="w-4 h-4" />
+        <Plus class="w-4 h-4 text-primary" />
       </Button>
 
       <!-- Session list -->
@@ -99,7 +103,7 @@ function saveEdit() {
             'group flex items-center justify-between rounded-md cursor-pointer transition-colors',
             isCollapsed ? 'py-3 px-1 w-8 justify-center flex-col' : 'px-2.5 py-1.5 w-full',
             sessionStore.activeSessionId === s.id
-              ? 'bg-secondary text-foreground font-normal shadow-xs border border-border/80'
+              ? 'bg-secondary/40 text-foreground font-normal shadow-xs border border-border border-l-2 border-l-primary'
               : 'border border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground'
           ]"
         >
@@ -129,7 +133,7 @@ function saveEdit() {
             </template>
             <template v-else>
               <span 
-                class="whitespace-nowrap leading-none tracking-wider font-medium text-xs" 
+                class="whitespace-nowrap leading-none tracking-wide font-medium text-[10px]"
                 style="writing-mode: vertical-rl; transform: rotate(180deg);"
                 title="Click to switch session"
               >{{ s.name }}</span>
@@ -154,6 +158,22 @@ function saveEdit() {
           </div>
         </div>
       </div>
+    </div>
+
+    <div :class="['shrink-0 border-t border-border p-2', isCollapsed ? 'w-full flex justify-center' : '']">
+      <Button
+        variant="ghost"
+        :size="isCollapsed ? 'icon' : 'sm'"
+        @click="isCollapsed = !isCollapsed"
+        :class="isCollapsed
+          ? 'h-7 w-7 text-muted-foreground hover:text-foreground'
+          : 'h-7 w-full justify-start gap-2 px-2 text-[11px] text-muted-foreground hover:text-foreground'"
+        :title="isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'"
+      >
+        <PanelLeftOpen v-if="isCollapsed" class="w-4 h-4" />
+        <PanelLeftClose v-else class="w-4 h-4" />
+        <span v-if="!isCollapsed">Collapse sidebar</span>
+      </Button>
     </div>
   </aside>
 </template>

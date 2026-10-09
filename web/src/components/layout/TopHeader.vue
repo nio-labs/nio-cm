@@ -109,7 +109,7 @@ function saveEdit() {
         size="sm" 
         @click="gridStore.addPane('bash')"
         :disabled="gridStore.activePanes.length >= MAX_PANES"
-        title="Spawn Shell Pane"
+        title="Spawn Shell Pane (Alt+Shift+N)"
         class="h-7 text-xs gap-1 font-normal"
       >
         <Plus class="w-3.5 h-3.5" />
@@ -301,6 +301,10 @@ function saveEdit() {
             <div class="flex justify-between py-1 border-b border-border/50">
               <span class="text-muted-foreground font-normal">Spawn New Nio Agent</span>
               <kbd class="px-1.5 py-0.5 bg-muted rounded text-[10px] font-normal">Alt + N</kbd>
+            </div>
+            <div class="flex justify-between py-1 border-b border-border/50">
+              <span class="text-muted-foreground font-normal">Spawn New Shell</span>
+              <kbd class="px-1.5 py-0.5 bg-muted rounded text-[10px] font-normal">Alt + Shift + N</kbd>
             </div>
             <div class="flex justify-between py-1 border-b border-border/50">
               <span class="text-muted-foreground font-normal">Close Active Pane</span>

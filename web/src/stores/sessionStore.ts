@@ -2,6 +2,9 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { WorkspaceSession } from '../types'
 
+export const MAX_WORKSPACES = 5
+const STORAGE_KEY = 'niocm_sessions'
+
 export const useSessionStore = defineStore('sessions', () => {
   const sessions = ref<WorkspaceSession[]>([
     {
@@ -16,14 +19,18 @@ export const useSessionStore = defineStore('sessions', () => {
 
   const activeSessionId = ref<string>('session-default')
 
-  // Load from localStorage if available
-  const saved = localStorage.getItem('niocm_sessions')
+  // Load saved workspaces. Accept the old array format for existing installs.
+  const saved = localStorage.getItem(STORAGE_KEY)
   if (saved) {
     try {
       const parsed = JSON.parse(saved)
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        sessions.value = parsed
-        activeSessionId.value = parsed[0].id
+      const savedSessions = Array.isArray(parsed) ? parsed : parsed.sessions
+      if (Array.isArray(savedSessions) && savedSessions.length > 0) {
+        sessions.value = savedSessions.slice(0, MAX_WORKSPACES)
+        const storedActiveId = Array.isArray(parsed) ? null : parsed.activeSessionId
+        activeSessionId.value = sessions.value.some((s) => s.id === storedActiveId)
+          ? storedActiveId
+          : sessions.value[0].id
       }
     } catch (e) {
       console.warn('Failed to parse saved sessions from localStorage')
@@ -31,14 +38,19 @@ export const useSessionStore = defineStore('sessions', () => {
   }
 
   function saveToStorage() {
-    localStorage.setItem('niocm_sessions', JSON.stringify(sessions.value))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      sessions: sessions.value,
+      activeSessionId: activeSessionId.value,
+    }))
   }
 
   const activeSession = computed(() => {
     return sessions.value.find((s) => s.id === activeSessionId.value) || sessions.value[0]
   })
 
-  function createSession(name: string, cwd: string = '~'): string {
+  function createSession(name: string, cwd: string = '~'): string | null {
+    if (sessions.value.length >= MAX_WORKSPACES) return null
+
     const id = `session-${Date.now()}`
     sessions.value.push({
       id,
@@ -76,6 +88,7 @@ export const useSessionStore = defineStore('sessions', () => {
   function switchSession(id: string) {
     if (sessions.value.some((s) => s.id === id)) {
       activeSessionId.value = id
+      saveToStorage()
     }
   }
 

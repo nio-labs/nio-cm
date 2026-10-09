@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { TerminalPane } from '../types'
 import { useSessionStore } from './sessionStore'
 
 export const MAX_PANES = 10
+const STORAGE_KEY = 'niocm_grid'
 
 export const useGridStore = defineStore('grid', () => {
   const sessionStore = useSessionStore()
@@ -12,6 +13,38 @@ export const useGridStore = defineStore('grid', () => {
   const sessionPanes = ref<Record<string, TerminalPane[]>>({})
   const focusedPaneId = ref<string | null>(null)
   const zoomedPaneId = ref<string | null>(null)
+
+  // Restore pane layouts so each terminal is recreated when its workspace opens.
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      if (parsed && typeof parsed.sessionPanes === 'object' && parsed.sessionPanes !== null) {
+        sessionPanes.value = Object.fromEntries(
+          Object.entries(parsed.sessionPanes)
+            .filter(([, panes]) => Array.isArray(panes))
+            .map(([id, panes]) => [id, (panes as TerminalPane[]).slice(0, MAX_PANES)])
+        )
+      }
+      focusedPaneId.value = typeof parsed.focusedPaneId === 'string' ? parsed.focusedPaneId : null
+    }
+  } catch {
+    console.warn('Failed to parse saved terminal layouts from localStorage')
+  }
+
+  watch([sessionPanes, focusedPaneId], () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      sessionPanes: sessionPanes.value,
+      focusedPaneId: focusedPaneId.value,
+    }))
+  }, { deep: true })
+
+  watch(() => sessionStore.sessions.map((session) => session.id), (sessionIds) => {
+    const allowedIds = new Set(sessionIds)
+    for (const id of Object.keys(sessionPanes.value)) {
+      if (!allowedIds.has(id)) delete sessionPanes.value[id]
+    }
+  })
 
   const activePanes = computed({
     get() {

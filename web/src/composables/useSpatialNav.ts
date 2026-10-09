@@ -29,6 +29,13 @@ export function useSpatialNav() {
           gridStore.navigateSpatial('right')
           return
         }
+
+        // Alt + Shift + N: ADD NEW SHELL
+        if (e.key.toLowerCase() === 'n') {
+          e.preventDefault()
+          gridStore.addPane('bash')
+          return
+        }
       } else {
         // Alt + Arrows: SWAP PANES
         if (e.key === 'ArrowUp') {
