@@ -3,6 +3,7 @@ import { nextTick, ref } from 'vue'
 import { useSessionStore } from '../../stores/sessionStore'
 import { useGridStore, MAX_PANES } from '../../stores/gridStore'
 import { useSettingsStore } from '../../stores/settingsStore'
+import { usePwa } from '../../composables/usePwa'
 import Button from '../ui/Button.vue'
 import Badge from '../ui/Badge.vue'
 import AppModal from '../ui/AppModal.vue'
@@ -12,6 +13,7 @@ import { Robot01Icon, Add01Icon, KeyboardIcon, Settings01Icon, FolderOpenIcon } 
 const sessionStore = useSessionStore()
 const gridStore = useGridStore()
 const settingsStore = useSettingsStore()
+const { canInstall, isInstalled, needRefresh, installError, install, reviewUpdate } = usePwa()
 
 const isEditingSession = ref(false)
 const sessionNameInput = ref('')
@@ -36,7 +38,7 @@ function saveEdit() {
 </script>
 
 <template>
-  <header class="h-11 border-b border-border bg-card/80 backdrop-blur px-2 flex items-center justify-between select-none shrink-0 z-30">
+  <header class="app-toolbar h-11 border-b border-border bg-card/80 backdrop-blur px-2 flex items-center justify-between select-none shrink-0 z-30">
     <!-- Left: Branding & Session info -->
     <div class="flex items-center gap-3">
       <div class="flex items-center gap-2 tracking-tight text-sm">
@@ -58,7 +60,7 @@ function saveEdit() {
       <div class="h-4 w-px bg-border mx-1"></div>
 
       <!-- Current Session Name -->
-      <div class="flex items-center gap-1.5 text-xs">
+      <div class="workspace-name flex items-center gap-1.5 text-xs">
         <HugeiconsIcon :icon="FolderOpenIcon" class="w-3.5 h-3.5 text-muted-foreground" />
         <template v-if="!isEditingSession">
           <span 
@@ -137,6 +139,18 @@ function saveEdit() {
     <AppModal v-if="showSettingsModal" title="Settings" description="Make your workspace feel right." @close="showSettingsModal = false">
       <template #icon><HugeiconsIcon :icon="Settings01Icon" class="w-4 h-4" /></template>
           <div class="space-y-5">
+
+            <div class="rounded-lg bg-muted/40 p-3 space-y-2">
+              <p class="font-medium text-foreground">Desktop app</p>
+              <p v-if="isInstalled" class="text-muted-foreground">NioCM is installed.</p>
+              <template v-else>
+                <p class="text-muted-foreground">Install NioCM for its own app window and quick access from your device.</p>
+                <Button v-if="canInstall" size="sm" @click="install">Install NioCM</Button>
+                <p v-else class="text-[11px] text-muted-foreground">Use your browser’s Install app option, or Share → Add to Home Screen on iPhone and iPad.</p>
+              </template>
+              <p v-if="installError" role="alert" class="text-destructive">{{ installError }}</p>
+              <Button v-if="needRefresh" variant="outline" size="sm" @click="showSettingsModal = false; reviewUpdate()">Review available update</Button>
+            </div>
 
     <!-- Terminal theme Setting -->
             <div class="space-y-2">
@@ -286,3 +300,20 @@ function saveEdit() {
     </AppModal>
   </header>
 </template>
+
+<style scoped>
+@media (display-mode: window-controls-overlay) {
+  .app-toolbar {
+    height: max(2.75rem, env(titlebar-area-height, 0px));
+    padding-left: calc(env(titlebar-area-x, 0px) + 0.5rem);
+    padding-right: calc(100% - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100%) + 0.5rem);
+    -webkit-app-region: drag;
+  }
+
+  .app-toolbar :deep(button),
+  .app-toolbar :deep(input),
+  .workspace-name {
+    -webkit-app-region: no-drag;
+  }
+}
+</style>

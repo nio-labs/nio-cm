@@ -143,6 +143,7 @@ const THEME_ACCENTS: Record<string, string> = {
     }
     
     const palette = getTerminalTheme(terminalTheme.value)
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', palette.background)
     const bgHsl = hexToHsl(palette.background)
     const fgHsl = hexToHsl(palette.foreground)
     

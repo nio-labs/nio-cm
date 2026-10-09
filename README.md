@@ -19,7 +19,7 @@
 
 ## Features
 
-- 🖥️ **Desktop PWA Shell**: Runs on `http://localhost:1422`, installable as a frameless standalone desktop application.
+- 🖥️ **Desktop PWA Shell**: Runs on `http://localhost:1422`, installable as a standalone application with an offline frontend.
 - 🪟 **10-Pane Spatial Grid**: Dynamic CSS Grid auto-scaling from 1 to 10 panes with hard limit enforcement.
 - ⌨️ **2D Spatial Navigation**:
   - `Alt + ↑ / ↓ / ← / →`: Move focus across the 2D grid.
@@ -61,3 +61,27 @@ cargo run --manifest-path server/Cargo.toml
 cd web && pnpm dev
 ```
 Open **`http://localhost:5174`**.
+
+### Install NioCM as an app
+
+Build the frontend and open `http://localhost:1422`. In Settings → Desktop app,
+choose **Install NioCM** when your browser offers installation. You can also use
+the browser's install menu. On iPhone and iPad, use **Share → Add to Home Screen**.
+PWA installation and service workers require HTTPS or a trusted localhost origin.
+The development server does not register a service worker, so HMR remains uncached.
+
+On supported desktop Chrome and Edge installations, use the browser's title-bar
+toggle to show or hide the window title bar. NioCM supports Window Controls Overlay
+and reserves room for the native window buttons. The browser controls this toggle;
+it is not available from a normal browser tab.
+
+After the first successful visit, the production service worker caches the
+interface, icons, and bundled Google Sans Code fonts. Workspace layouts and
+settings continue to use browser storage. Terminal processes still require the
+running NioCM daemon; the service worker does not cache WebSocket traffic or
+`/health` responses. Optional fonts from Google Fonts require an internet connection.
+
+New versions display an update prompt and can also be reviewed in Settings.
+Updates never reload an active workspace automatically. **Reload and update**
+stops active terminal processes and restores the saved pane layout, so finish or
+save terminal work before applying an update.

@@ -3,6 +3,8 @@ import { onMounted } from 'vue'
 import TopHeader from './components/layout/TopHeader.vue'
 import Sidebar from './components/layout/Sidebar.vue'
 import TerminalGrid from './components/terminal/TerminalGrid.vue'
+import PwaStatus from './components/layout/PwaStatus.vue'
+import { usePwa } from './composables/usePwa'
 import { useSpatialNav } from './composables/useSpatialNav'
 import { useGridStore } from './stores/gridStore'
 import { useWebSocket } from './composables/useWebSocket'
@@ -10,6 +12,7 @@ import { useWebSocket } from './composables/useWebSocket'
 useSpatialNav()
 const gridStore = useGridStore()
 const ws = useWebSocket()
+const { isOnline } = usePwa()
 
 onMounted(() => {
   ws.connect()
@@ -22,7 +25,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden font-sans">
+  <div class="h-dvh w-screen flex flex-col bg-background text-foreground overflow-hidden font-sans" style="padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)">
     <!-- Top Command Navigation Header -->
     <TopHeader />
 
@@ -34,11 +37,12 @@ onMounted(() => {
 
     <!-- Reconnecting Toast Indicator -->
     <div
-      v-if="!ws.connected.value && ws.connecting.value"
+      v-if="isOnline && !ws.connected.value && ws.connecting.value"
       class="fixed bottom-3 right-3 bg-card border border-amber-500/40 text-amber-400 text-xs px-3 py-1.5 rounded-md shadow-lg flex items-center gap-2 z-50"
     >
       <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
       Connecting to NioCM daemon (:1422)...
     </div>
+    <PwaStatus />
   </div>
 </template>
