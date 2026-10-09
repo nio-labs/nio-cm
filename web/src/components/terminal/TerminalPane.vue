@@ -11,17 +11,9 @@ import { useSettingsStore } from '../../stores/settingsStore'
 import { useWebSocket } from '../../composables/useWebSocket'
 import Button from '../ui/Button.vue'
 import Badge from '../ui/Badge.vue'
-import {
-  Maximize2,
-  Minimize2,
-  X,
-  Bot,
-  Terminal as TerminalIcon,
-  FolderOpen,
-  MoreHorizontal,
-  ChevronDown,
-  ChevronUp
-} from 'lucide-vue-next'
+import AppModal from '../ui/AppModal.vue'
+import { HugeiconsIcon } from '@hugeicons/vue'
+import { Maximize01Icon, Minimize01Icon, Cancel01Icon, Robot01Icon, CommandLineIcon, FolderOpenIcon, MoreHorizontalIcon, ArrowDown01Icon, ArrowUp01Icon } from '@hugeicons/core-free-icons'
 
 const props = defineProps<{
   pane: TerminalPane
@@ -300,8 +292,8 @@ function handleFocus() {
         <span class="font-mono text-[10px] text-muted-foreground shrink-0">#{{ pane.sequenceId }}</span>
 
         <!-- Shell or Agent icon -->
-        <Bot v-if="pane.shell === 'nio'" class="w-3.5 h-3.5 text-primary shrink-0" />
-        <TerminalIcon v-else class="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+        <HugeiconsIcon :icon="Robot01Icon" v-if="pane.shell === 'nio'" class="w-3.5 h-3.5 text-primary shrink-0" />
+        <HugeiconsIcon :icon="CommandLineIcon" v-else class="w-3.5 h-3.5 text-muted-foreground shrink-0" />
 
         <!-- Title -->
         <span class="font-normal text-[11px] truncate text-foreground shrink-0">{{ pane.title }}</span>
@@ -320,7 +312,7 @@ function handleFocus() {
             :aria-expanded="showPaneMenu"
             class="h-5 w-5 text-muted-foreground hover:text-foreground"
           >
-            <MoreHorizontal class="w-3.5 h-3.5" />
+            <HugeiconsIcon :icon="MoreHorizontalIcon" class="w-3.5 h-3.5" />
           </Button>
 
           <div
@@ -334,7 +326,7 @@ function handleFocus() {
               class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[11px] text-foreground hover:bg-muted"
               @click="openFolderPicker"
             >
-              <FolderOpen class="h-3.5 w-3.5 text-muted-foreground" />
+              <HugeiconsIcon :icon="FolderOpenIcon" class="h-3.5 w-3.5 text-muted-foreground" />
               Change folder
             </button>
             <button
@@ -342,8 +334,8 @@ function handleFocus() {
               class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[11px] text-foreground hover:bg-muted"
               @click="togglePaneZoom"
             >
-              <Minimize2 v-if="isZoomed" class="h-3.5 w-3.5 text-primary" />
-              <Maximize2 v-else class="h-3.5 w-3.5 text-muted-foreground" />
+              <HugeiconsIcon :icon="Minimize01Icon" v-if="isZoomed" class="h-3.5 w-3.5 text-primary" />
+              <HugeiconsIcon :icon="Maximize01Icon" v-else class="h-3.5 w-3.5 text-muted-foreground" />
               {{ isZoomed ? 'Restore grid' : 'Fullscreen pane' }}
             </button>
           </div>
@@ -357,14 +349,19 @@ function handleFocus() {
           title="Close pane (Alt+W)"
           class="h-5 w-5 text-muted-foreground hover:text-destructive"
         >
-          <X class="w-3 h-3" />
+          <HugeiconsIcon :icon="Cancel01Icon" class="w-3 h-3" />
         </Button>
       </div>
     </div>
 
     <!-- Terminal Container -->
     <div class="flex-1 w-full h-full min-h-0 relative">
-      <div ref="terminalEl" class="absolute inset-0 w-full h-full"></div>
+      <div
+        ref="terminalEl"
+        class="absolute inset-0 w-full h-full"
+        @pointerdown.capture="handleFocus"
+        @focusin="gridStore.setFocused(pane.id)"
+      ></div>
     </div>
 
     <!-- Pane Footer -->
@@ -380,7 +377,7 @@ function handleFocus() {
           :title="`Change working directory: ${pane.cwd}`"
           @click.stop="openFolderPicker"
         >
-          <FolderOpen class="mr-1 h-2.5 w-2.5 shrink-0" />
+          <HugeiconsIcon :icon="FolderOpenIcon" class="mr-1 h-2.5 w-2.5 shrink-0" />
           {{ pane.cwd }}
         </button>
       </div>
@@ -391,7 +388,7 @@ function handleFocus() {
         title="Collapse pane footer"
         @click.stop="isFooterCollapsed = true"
       >
-        <ChevronDown class="h-3 w-3" />
+        <HugeiconsIcon :icon="ArrowDown01Icon" class="h-3 w-3" />
       </Button>
     </div>
     <div v-else class="h-4 shrink-0 flex items-center justify-end border-t border-border/70 bg-muted/50 px-1">
@@ -402,39 +399,35 @@ function handleFocus() {
         title="Expand pane footer"
         @click.stop="isFooterCollapsed = false"
       >
-        <ChevronUp class="h-3 w-3" />
+        <HugeiconsIcon :icon="ArrowUp01Icon" class="h-3 w-3" />
       </Button>
     </div>
 
-    <!-- Change Directory Modal -->
-    <Teleport to="body">
-      <div 
-        v-if="showCwdModal" 
-        class="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4"
-        @mousedown.self="showCwdModal = false"
-      >
-        <div class="bg-card border border-border rounded-lg shadow-2xl max-w-sm w-full flex flex-col overflow-hidden">
-          <div class="p-4 flex flex-col gap-3">
-            <div class="text-sm font-medium text-foreground">Change Working Directory</div>
+    <AppModal v-if="showCwdModal" title="Change folder" description="Choose the working folder for this pane." @close="showCwdModal = false">
+      <template #icon><HugeiconsIcon :icon="FolderOpenIcon" class="w-4 h-4" /></template>
+      <div class="space-y-4">
+          <div class="space-y-3">
             <div class="flex items-center gap-2">
               <input
                 v-model="cwdInput"
                 @keydown.enter.prevent="fetchDirs(cwdInput)"
                 type="text"
-                class="flex-1 h-8 px-2.5 rounded-md border border-border bg-background text-foreground text-xs outline-none focus:border-primary font-mono"
+                class="min-w-0 flex-1 h-9 px-3 rounded-md border border-border bg-background text-foreground text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 font-mono"
+                aria-label="Working folder"
                 placeholder="/path/to/folder"
               />
-              <Button variant="outline" size="sm" class="h-8" @click="fetchDirs(cwdInput)">Go</Button>
+              <Button variant="outline" size="sm" class="h-9" @click="fetchDirs(cwdInput)">Go</Button>
             </div>
             <input
               v-model="cwdFilter"
               type="text"
-              class="w-full h-8 px-2.5 rounded-md border border-border bg-muted/30 text-foreground text-xs outline-none focus:border-primary"
+              class="w-full h-9 px-3 rounded-md border border-border bg-muted/30 text-foreground text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+              aria-label="Search folders"
               placeholder="Search"
               autofocus
             />
           </div>
-          <div class="h-48 overflow-y-auto border-t border-b border-border bg-muted/10 relative">
+          <div class="h-48 overflow-y-auto rounded-lg border border-border bg-muted/20 relative">
             <div v-if="cwdLoading" class="absolute inset-0 flex items-center justify-center bg-background/50">
               <span class="text-xs text-muted-foreground">Loading...</span>
             </div>
@@ -445,7 +438,7 @@ function handleFocus() {
                 @click="selectDir(d)"
                 class="px-4 py-1.5 text-xs text-foreground hover:bg-secondary cursor-pointer flex items-center gap-2"
               >
-                <FolderOpen class="w-3.5 h-3.5 text-muted-foreground" />
+                <HugeiconsIcon :icon="FolderOpenIcon" class="w-3.5 h-3.5 text-muted-foreground" />
                 <span :class="{'font-medium text-primary': d === '..'}">{{ d }}</span>
               </li>
             </ul>
@@ -453,12 +446,11 @@ function handleFocus() {
               No folders found
             </div>
           </div>
-          <div class="p-4 flex justify-end gap-2 bg-muted/20">
-            <Button variant="ghost" size="sm" @click="showCwdModal = false">Cancel</Button>
-            <Button variant="default" size="sm" @click="changeWorkingDirectory">Restart Pane Here</Button>
-          </div>
-        </div>
       </div>
-    </Teleport>
+      <template #footer>
+        <Button variant="ghost" size="sm" @click="showCwdModal = false">Cancel</Button>
+        <Button variant="default" size="sm" @click="changeWorkingDirectory">Restart pane here</Button>
+      </template>
+    </AppModal>
   </div>
 </template>

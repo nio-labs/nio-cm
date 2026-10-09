@@ -3,7 +3,8 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useGridStore } from '../../stores/gridStore'
 import TerminalPane from './TerminalPane.vue'
 import Button from '../ui/Button.vue'
-import { Bot, Plus, Terminal as TerminalIcon, Sparkles } from 'lucide-vue-next'
+import { HugeiconsIcon } from '@hugeicons/vue'
+import { Robot01Icon, CommandLineIcon, AiSparklesIcon } from '@hugeicons/core-free-icons'
 
 const gridStore = useGridStore()
 const gridElement = ref<HTMLElement | null>(null)
@@ -12,8 +13,8 @@ const rowDividerPositions = ref<Array<{ left: number; top: number; width: number
 const isResizing = ref(false)
 const COLUMN_GAP = 6
 const ROW_GAP = 6
-const MIN_PANE_WIDTH = 320
-const MIN_PANE_HEIGHT = 160
+const MIN_PANE_WIDTH = 370
+const MIN_PANE_HEIGHT = 250
 let gridResizeObserver: ResizeObserver | null = null
 
 function getTrackSizes(axis: 'columns' | 'rows', count: number) {
@@ -50,11 +51,12 @@ const gridStyle = computed(() => {
       .map((size) => `minmax(${MIN_PANE_WIDTH}px, calc(${size * 100}% - ${size * columnGapTotal}px))`)
       .join(' '),
     gridTemplateRows: rowSizes.value
-      .map((size) => `minmax(0px, calc(${size * 100}% - ${size * rowGapTotal}px))`)
+      .map((size) => `minmax(${MIN_PANE_HEIGHT}px, calc(${size * 100}% - ${size * rowGapTotal}px))`)
       .join(' '),
     columnGap: `${COLUMN_GAP}px`,
     rowGap: `${ROW_GAP}px`,
     minWidth: `${cols * MIN_PANE_WIDTH + columnGapTotal}px`,
+    minHeight: `${rows * MIN_PANE_HEIGHT + rowGapTotal}px`,
   }
 })
 
@@ -182,7 +184,7 @@ function startResize(axis: 'columns' | 'rows', dividerIndex: number, event: Poin
   <div class="flex-1 w-full h-full min-h-0 bg-background p-1.5 overflow-auto relative select-none">
     <!-- Zoomed Pane View -->
     <template v-if="gridStore.zoomedPaneId">
-      <div class="w-full h-full">
+      <div class="w-full h-full" :style="{ minWidth: `${MIN_PANE_WIDTH}px`, minHeight: `${MIN_PANE_HEIGHT}px` }">
         <template v-for="(pane, idx) in gridStore.activePanes" :key="pane.id">
           <TerminalPane 
             v-if="pane.id === gridStore.zoomedPaneId" 
@@ -234,7 +236,7 @@ function startResize(axis: 'columns' | 'rows', dividerIndex: number, event: Poin
     <template v-else>
       <div class="h-full w-full flex flex-col items-center justify-center text-center p-6 space-y-4">
         <div class="h-16 w-16 rounded-2xl bg-[#008080]/10 border border-[#008080]/30 flex items-center justify-center text-primary shadow-inner">
-          <Bot class="w-8 h-8 animate-pulse text-[#008080]" />
+          <HugeiconsIcon :icon="Robot01Icon" class="w-8 h-8 animate-pulse text-[#008080]" />
         </div>
 
         <div class="space-y-1 max-w-sm">
@@ -251,7 +253,7 @@ function startResize(axis: 'columns' | 'rows', dividerIndex: number, event: Poin
             @click="gridStore.addPane('nio')"
             class="gap-1.5 shadow-md"
           >
-            <Sparkles class="w-3.5 h-3.5" />
+            <HugeiconsIcon :icon="AiSparklesIcon" class="w-3.5 h-3.5" />
             Launch NioAI Agent
           </Button>
 
@@ -261,7 +263,7 @@ function startResize(axis: 'columns' | 'rows', dividerIndex: number, event: Poin
             @click="gridStore.addPane('bash')"
             class="gap-1.5"
           >
-            <TerminalIcon class="w-3.5 h-3.5" />
+            <HugeiconsIcon :icon="CommandLineIcon" class="w-3.5 h-3.5" />
             Standard Shell
           </Button>
         </div>

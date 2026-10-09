@@ -3,14 +3,8 @@ import { nextTick, ref, watch } from 'vue'
 import { useSessionStore } from '../../stores/sessionStore'
 import Button from '../ui/Button.vue'
 import { MAX_WORKSPACES } from '../../stores/sessionStore'
-import {
-  FolderKanban,
-  Plus,
-  Trash2,
-  ChevronRight,
-  PanelLeftClose,
-  PanelLeftOpen
-} from 'lucide-vue-next'
+import { HugeiconsIcon } from '@hugeicons/vue'
+import { FolderManagementIcon, Add01Icon, Delete02Icon, ArrowRight01Icon, PanelLeftCloseIcon, PanelLeftOpenIcon } from '@hugeicons/core-free-icons'
 
 const sessionStore = useSessionStore()
 
@@ -60,7 +54,7 @@ function saveEdit() {
           class="text-[10px] font-medium text-muted-foreground uppercase tracking-[0.14em] flex items-center gap-2"
         >
           <span class="w-6 h-6 rounded-md bg-primary/10 text-primary flex items-center justify-center">
-            <FolderKanban class="w-3.5 h-3.5" />
+            <HugeiconsIcon :icon="FolderManagementIcon" class="w-3.5 h-3.5" />
           </span>
           Workspaces
         </span>
@@ -74,7 +68,7 @@ function saveEdit() {
             class="h-6 px-2 rounded-full border border-primary/20 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary text-[10px] gap-1 shrink-0"
             :title="sessionStore.sessions.length >= MAX_WORKSPACES ? `Workspace limit reached (${MAX_WORKSPACES})` : 'New Workspace'"
           >
-            <Plus class="w-3 h-3" />
+            <HugeiconsIcon :icon="Add01Icon" class="w-3 h-3" />
             New
           </Button>
         </div>
@@ -89,7 +83,7 @@ function saveEdit() {
         :disabled="sessionStore.sessions.length >= MAX_WORKSPACES"
         :title="sessionStore.sessions.length >= MAX_WORKSPACES ? `Workspace limit reached (${MAX_WORKSPACES})` : 'New Workspace'"
       >
-        <Plus class="w-4 h-4 text-primary" />
+        <HugeiconsIcon :icon="Add01Icon" class="w-4 h-4 text-primary" />
       </Button>
 
       <!-- Session list -->
@@ -149,9 +143,9 @@ function saveEdit() {
               title="Delete session"
               class="h-5 w-5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
             >
-              <Trash2 class="w-3 h-3" />
+              <HugeiconsIcon :icon="Delete02Icon" class="w-3 h-3" />
             </Button>
-            <ChevronRight 
+            <HugeiconsIcon :icon="ArrowRight01Icon"
               v-if="sessionStore.activeSessionId === s.id" 
               class="w-3 h-3 text-muted-foreground" 
             />
@@ -170,8 +164,8 @@ function saveEdit() {
           : 'h-7 w-full justify-start gap-2 px-2 text-[11px] text-muted-foreground hover:text-foreground'"
         :title="isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'"
       >
-        <PanelLeftOpen v-if="isCollapsed" class="w-4 h-4" />
-        <PanelLeftClose v-else class="w-4 h-4" />
+        <HugeiconsIcon :icon="PanelLeftCloseIcon" v-if="isCollapsed" class="w-4 h-4" />
+        <HugeiconsIcon :icon="PanelLeftOpenIcon" v-else class="w-4 h-4" />
         <span v-if="!isCollapsed">Collapse sidebar</span>
       </Button>
     </div>
