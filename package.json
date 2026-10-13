@@ -1,6 +1,6 @@
 {
   "name": "@nio-labs/nio-cm",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "NioCM — The Agentic Terminal. Desktop PWA Terminal with multi-pane spatial grid powered by NioAI.",
   "main": "bin/nio-cm.js",
   "bin": {
@@ -13,6 +13,11 @@
     "dev:server": "cargo run --manifest-path server/Cargo.toml",
     "build:web": "cd web && pnpm build",
     "build:server": "cargo build --release --manifest-path server/Cargo.toml",
+    "desktop:sidecar": "node scripts/stage-sidecar.mjs",
+    "predesktop:dev": "node scripts/stage-sidecar.mjs",
+    "predesktop:build": "node scripts/stage-sidecar.mjs",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "tauri build",
     "build": "pnpm build:web && pnpm build:server"
   },
   "repository": {
@@ -48,5 +53,8 @@
     "bin",
     "README.md",
     "LICENSE"
-  ]
+  ],
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.12.2"
+  }
 }

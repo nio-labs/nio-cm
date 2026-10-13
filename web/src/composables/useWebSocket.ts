@@ -11,6 +11,11 @@ export function useWebSocket() {
 
   function getWsUrl(): string {
     const loc = window.location
+    if ('__TAURI_INTERNALS__' in window) {
+      // Desktop (Tauri): bundled UI is served from tauri://localhost, so the
+      // daemon can never be reached via the page origin. Always use the loopback.
+      return 'ws://127.0.0.1:1422/ws'
+    }
     if (loc.port === '5174') {
       // Vite dev server proxy
       return `ws://${loc.hostname}:1422/ws`

@@ -134,7 +134,7 @@ ENVIRONMENT:
 
 ## Features & Shortcuts
 
-- 🖥️ **Desktop PWA Shell**: Runs on `http://localhost:1422`, installable as a standalone application with an offline frontend.
+- 🖥️ **Desktop PWA + Native App**: Runs on `http://localhost:1422`, installable as a standalone application with an offline frontend, or ships as a native Tauri build for Windows, macOS, and Linux.
 - 🪟 **10-Pane Spatial Grid**: Dynamic CSS Grid auto-scaling from 1 to 10 panes with hard limit enforcement.
 - ⌨️ **2D Spatial Navigation**:
   - `Alt + ↑ / ↓ / ← / →`: Move focus across the 2D grid.
@@ -169,12 +169,54 @@ running NioCM daemon; the service worker does not cache WebSocket traffic or
 
 ---
 
+## Native Desktop App (Tauri)
+
+The same UI ships as a native desktop application for **Windows, macOS, and
+Linux**. The Tauri shell (`src-tauri/`) runs the `niocm` daemon as a bundled
+sidecar and loads `web/dist`; panes connect to `ws://127.0.0.1:1422` exactly as
+before. The daemon is pinned to loopback in this mode, so PTY sessions are never
+exposed to the network. If a daemon is already running, the app attaches to it
+instead of starting a second one, and on exit it asks the daemon to reap every
+PTY session (`POST /shutdown`) before terminating it.
+
+Prerequisites (once per OS):
+
+- **Linux**: `libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`, `patchelf`
+- **macOS**: Xcode + Command Line Tools
+- **Windows**: MSVC Build Tools (C++ workload); WebView2 runtime (preinstalled on Win10/11)
+- All: Node 22+, pnpm, Rust stable
+
+```bash
+pnpm install            # once, installs the Tauri CLI at the repo root
+pnpm install --dir web  # once, frontend dependencies
+pnpm desktop:dev        # run the desktop app with HMR
+pnpm desktop:build      # produce platform installers (msi/exe, dmg, deb/AppImage)
+```
+
+`desktop:dev` and `desktop:build` automatically build the `niocm` daemon and
+stage it as a Tauri sidecar (`scripts/stage-sidecar.mjs` → `src-tauri/binaries/`);
+run `pnpm desktop:sidecar` on its own after changing the Rust daemon. To
+regenerate the app icons from `web/public/logo.svg`:
+
+```bash
+node_modules/.bin/tauri icon web/public/logo.svg -o src-tauri/icons
+```
+
+---
+
 ## Publishing releases
 
 Push a version tag such as `v0.2.0` to run the release workflow. For a manual
 run, select an existing version tag. The workflow sets the npm package version
 from that tag; the npm launcher downloads binaries from the matching GitHub release.
 Set the repository's `NPM_TOKEN` secret to enable npm publishing.
+
+The same tag also runs `.github/workflows/desktop.yml`, which builds the native
+desktop installers on `ubuntu-24.04`, `windows-latest`, and `macos-latest`
+(x64 + arm64) and attaches them to the draft GitHub release. Without signing
+secrets, macOS builds are ad-hoc signed (fine for testing); set `APPLE_CERTIFICATE`,
+`APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`,
+and `APPLE_TEAM_ID` to sign and notarize for distribution.
 
 Reruns skip npm versions that are already published. If npm reports that the
 version is already staged, the workflow adds a warning and records the pending

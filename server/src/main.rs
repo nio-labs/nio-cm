@@ -6,7 +6,7 @@ use axum::{
     extract::{ws::WebSocketUpgrade, State},
     http::{header, StatusCode, Uri},
     response::{IntoResponse, Json, Response},
-    routing::get,
+    routing::{get, post},
     Router,
 };
 use pty::PtyManager;
@@ -142,6 +142,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let router = Router::new()
         .route("/ws", get(ws_handler))
         .route("/health", get(health_handler))
+        .route("/shutdown", post(shutdown_handler))
         .fallback(move |uri: Uri| {
             let dist_opt = dist_dir.clone();
             async move {
@@ -232,4 +233,18 @@ async fn health_handler() -> impl IntoResponse {
         "app": "NioCM",
         "version": env!("CARGO_PKG_VERSION")
     }))
+}
+
+/// Graceful shutdown, used by the desktop app so every PTY session is reaped
+/// before the daemon exits.
+async fn shutdown_handler(State(state): State<AppState>) -> impl IntoResponse {
+    tokio::spawn(async move {
+        // Give the response time to flush before killing the process.
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        tracing::info!("Shutdown requested. Reaping all PTY sessions...");
+        let mut mgr = state.pty_manager.lock().await;
+        mgr.kill_all();
+        std::process::exit(0);
+    });
+    Json(json!({ "status": "shutting_down" }))
 }
