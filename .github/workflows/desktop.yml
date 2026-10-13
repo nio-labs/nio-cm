@@ -104,18 +104,32 @@ jobs:
           fi
 
       - name: Build desktop app
-        run: pnpm exec tauri build --target ${{ matrix.target }}
+        shell: bash
+        run: |
+          [ -z "$APPLE_CERTIFICATE" ] && unset APPLE_CERTIFICATE || true
+          [ -z "$APPLE_CERTIFICATE_PASSWORD" ] && unset APPLE_CERTIFICATE_PASSWORD || true
+          [ -z "$APPLE_SIGNING_IDENTITY" ] && unset APPLE_SIGNING_IDENTITY || true
+          [ -z "$APPLE_ID" ] && unset APPLE_ID || true
+          [ -z "$APPLE_PASSWORD" ] && unset APPLE_PASSWORD || true
+          [ -z "$APPLE_TEAM_ID" ] && unset APPLE_TEAM_ID || true
+          pnpm exec tauri build --target ${{ matrix.target }}
 
       - name: Collect installers
         shell: bash
         run: |
           mkdir -p desktop-dist
+          find target src-tauri/target -type f \( -name "*.deb" -o -name "*.AppImage" -o -name "*.dmg" -o -name "*.msi" -o -name "*.exe" \) -path "*/bundle/*" -exec cp -f {} desktop-dist/ \; 2>/dev/null || true
+          cp -f target/${{ matrix.target }}/release/bundle/deb/*.deb desktop-dist/ 2>/dev/null || true
+          cp -f target/${{ matrix.target }}/release/bundle/appimage/*.AppImage desktop-dist/ 2>/dev/null || true
+          cp -f target/${{ matrix.target }}/release/bundle/dmg/*.dmg desktop-dist/ 2>/dev/null || true
+          cp -f target/${{ matrix.target }}/release/bundle/msi/*.msi desktop-dist/ 2>/dev/null || true
+          cp -f target/${{ matrix.target }}/release/bundle/nsis/*.exe desktop-dist/ 2>/dev/null || true
           cp -f src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb desktop-dist/ 2>/dev/null || true
           cp -f src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage desktop-dist/ 2>/dev/null || true
           cp -f src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg desktop-dist/ 2>/dev/null || true
           cp -f src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi desktop-dist/ 2>/dev/null || true
           cp -f src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe desktop-dist/ 2>/dev/null || true
-          ls -lh desktop-dist
+          ls -la desktop-dist
 
       - name: Upload installers
         uses: actions/upload-artifact@v4
