@@ -3,6 +3,9 @@ members = [
     "server",
     "src-tauri",
 ]
+default-members = [
+    "server",
+]
 resolver = "2"
 
 [profile.release]

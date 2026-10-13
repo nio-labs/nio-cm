@@ -1,6 +1,6 @@
 [package]
 name = "niocm-desktop"
-version = "0.3.0"
+version = "0.3.1"
 description = "NioCM desktop shell — hosts the niocm daemon as a bundled sidecar"
 authors = ["Nio Labs Team"]
 edition = "2021"

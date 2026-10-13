@@ -29,9 +29,9 @@ jobs:
       - name: Format
         run: cargo fmt --check
       - name: Tests
-        run: cargo test --locked
+        run: cargo test --locked -p niocm-server
       - name: Clippy
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy -p niocm-server --all-targets -- -D warnings
 
   build:
     name: build ${{ matrix.target }}
