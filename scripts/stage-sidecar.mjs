@@ -1,7 +1,7 @@
 // Stages the compiled niocm daemon as a Tauri sidecar (src-tauri/binaries/niocm-<target-triple>).
 // Runs automatically before `pnpm desktop:dev` / `pnpm desktop:build` via pnpm pre-scripts.
 import { execSync } from "node:child_process";
-import { copyFileSync, mkdirSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync } from "node:fs";
 import { arch, platform } from "node:os";
 import { join } from "node:path";
 
@@ -17,6 +17,11 @@ function targetTriple() {
 
 const triple = targetTriple();
 const exe = platform() === "win32" ? "niocm.exe" : "niocm";
+
+if (!existsSync("web/dist")) {
+  console.log("[niocm] web/dist not found, building web frontend...");
+  execSync("pnpm --dir web build", { stdio: "inherit" });
+}
 
 execSync(`cargo build --manifest-path server/Cargo.toml --target ${triple}`, {
   stdio: "inherit",

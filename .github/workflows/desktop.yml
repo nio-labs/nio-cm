@@ -84,6 +84,10 @@ jobs:
         run: pnpm install --frozen-lockfile
         working-directory: web
 
+      - name: Build Web Frontend
+        run: pnpm build
+        working-directory: web
+
       - name: Build niocm daemon (sidecar)
         run: cargo build --release --manifest-path server/Cargo.toml --target ${{ matrix.target }}
 
