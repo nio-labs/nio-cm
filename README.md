@@ -31,17 +31,40 @@
 
 ## Supported Platforms
 
-| OS | Architectures | Method |
-|---|---|---|
-| **Linux** | `x86_64`, `aarch64` | `npx`, `curl` installer, Docker, Binary |
-| **macOS** | Apple Silicon (`aarch64`), Intel (`x86_64`) | `npx`, `curl` installer, Binary |
-| **Windows** | `x86_64` | `npx`, Binary (`.exe`) |
+| OS | Architectures | Native Desktop App | CLI Daemon / PWA |
+|---|---|---|---|
+| **macOS** | Apple Silicon (`aarch64`), Intel (`x86_64`) | `curl` installer, `.dmg` | `npx`, Binary, `curl --cli` |
+| **Linux** | `x86_64`, `aarch64` | `curl` installer, `.AppImage`, `.deb` | `npx`, Docker, Binary, `curl --cli` |
+| **Windows** | `x86_64` | `.exe` installer, `.msi` | `npx`, Binary (`.exe`) |
 
 ---
 
 ## Quick Start
 
-### 1. Instant Run with NPX (Zero-Install)
+### 1. One-Line Desktop App Installer (macOS & Linux)
+
+Install the full **NioCM Desktop Application** and CLI with one command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nio-labs/nio-cm/main/install.sh | bash
+```
+
+- **macOS**: Downloads and installs `NioCM.app` into `/Applications` and configures the `niocm` CLI in your `PATH`.
+- **Linux**: Downloads and installs `NioCM.AppImage`, creates a desktop menu entry (`.desktop`), and configures the `niocm` / `niocm-desktop` CLI.
+- **NioAI Agent**: Automatically bundles and verifies the **NioAI** (`nio`) agent.
+
+> **Windows**: Download the Windows installer (`.exe` setup or `.msi`) from [GitHub Releases](https://github.com/nio-labs/nio-cm/releases/latest).
+
+### 2. Standalone CLI Daemon Only (Headless / Servers)
+
+For remote servers, Docker, or headless environments without a desktop GUI:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nio-labs/nio-cm/main/install.sh | bash -s -- --cli
+niocm
+```
+
+### 3. Instant Run with NPX (Zero-Install)
 
 Run NioCM directly in any directory without installing:
 
@@ -60,16 +83,7 @@ niocm
 
 Under the hood, `npx @nio-labs/nio-cm` auto-detects your OS/arch, downloads and verifies the native binary via SHA-256 checksums, caches it in `~/.niocm/bin`, and launches the daemon.
 
-### 2. One-Line Native Installer (Linux & macOS)
-
-Downloads the pre-built native binary for your architecture, verifies SHA-256 checksums, and installs to `~/.local/bin`:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/nio-labs/nio-cm/main/install.sh | bash
-niocm
-```
-
-### 3. Docker
+### 4. Docker
 
 ```bash
 docker run -d \
@@ -78,14 +92,14 @@ docker run -d \
   ghcr.io/nio-labs/nio-cm:latest
 ```
 
-### 4. 1-Click Cloud Deploy
+### 5. 1-Click Cloud Deploy
 
 Deploy your personal remote Agentic Terminal in seconds:
 
 - **Railway**: Click the [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https%3A%2F%2Fgithub.com%2Fnio-labs%2Fnio-cm) button. Automatic Dockerfile detection with port mapping and `/health` probes.
 - **Koyeb**: Click the [![Deploy to Koyeb](https://www.koyeb.com/static/images/deploy/button.svg)](https://app.koyeb.com/deploy?type=git&repository=github.com/nio-labs/nio-cm&branch=main&name=nio-cm) button or deploy using `koyeb.yaml`.
 
-### 5. Build & Run from Source
+### 6. Build & Run from Source
 
 ```bash
 # Build frontend
@@ -98,7 +112,7 @@ cargo build --release --manifest-path server/Cargo.toml
 
 Visit **`http://localhost:1422`** in your browser, or click **Install** to add NioCM to your desktop.
 
-### 6. Development Mode (with HMR)
+### 7. Development Mode (with HMR)
 
 ```bash
 # Terminal 1: Backend daemon
@@ -178,6 +192,21 @@ before. The daemon is pinned to loopback in this mode, so PTY sessions are never
 exposed to the network. If a daemon is already running, the app attaches to it
 instead of starting a second one, and on exit it asks the daemon to reap every
 PTY session (`POST /shutdown`) before terminating it.
+
+### Install Desktop App
+
+```bash
+# macOS & Linux one-line installer
+curl -fsSL https://raw.githubusercontent.com/nio-labs/nio-cm/main/install.sh | bash
+```
+
+Or download release packages directly from [GitHub Releases](https://github.com/nio-labs/nio-cm/releases/latest):
+- **macOS (Apple Silicon)**: `NioCM_*_aarch64.dmg`
+- **macOS (Intel)**: `NioCM_*_x64.dmg`
+- **Linux (x64)**: `NioCM_*_amd64.AppImage` or `NioCM_*_amd64.deb`
+- **Windows (x64)**: `NioCM_*_x64-setup.exe` or `NioCM_*_x64_en-US.msi`
+
+### Building from Source
 
 Prerequisites (once per OS):
 

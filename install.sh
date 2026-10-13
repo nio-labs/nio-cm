@@ -1,8 +1,8 @@
 #!/bin/sh
 # NioCM installer
 #
-# Downloads niocm binary for your OS/arch from the latest GitHub release,
-# verifies its SHA-256 checksum, and installs it.
+# Installs the native NioCM Desktop application for Linux and macOS,
+# configures the terminal CLI, and bundles the NioAI agent.
 # Re-running the script upgrades to the newest version.
 #
 # Usage:
@@ -10,11 +10,13 @@
 #
 # Options:
 #   VERSION=x.y.z bash install.sh          Install a specific version (default: latest)
+#   bash install.sh --desktop              Install Desktop application (default)
+#   bash install.sh --cli                  Install standalone CLI daemon only (headless)
 #   bash install.sh --dry-run              Print what would happen, change nothing
 #   bash install.sh --force                Reinstall even when the version matches
 #
 # Environment:
-#   NIOCM_INSTALL_DIR                     Install directory (default ~/.local/bin, or
+#   NIOCM_INSTALL_DIR                     Install directory for CLI (default ~/.local/bin, or
 #                                         /usr/local/bin when run as root)
 
 set -eu
@@ -22,14 +24,17 @@ set -eu
 REPO="nio-labs/nio-cm"
 DRY_RUN=0
 FORCE=0
+MODE="desktop"
 
 usage() {
-  echo "Usage: bash install.sh [--dry-run] [--force]"
-  echo "       VERSION=x.y.z bash install.sh [--dry-run] [--force]"
+  echo "Usage: bash install.sh [--desktop | --cli] [--dry-run] [--force]"
+  echo "       VERSION=x.y.z bash install.sh [--desktop | --cli] [--dry-run] [--force]"
 }
 
 for arg in "$@"; do
   case "$arg" in
+    --desktop) MODE="desktop" ;;
+    --cli) MODE="cli" ;;
     --dry-run) DRY_RUN=1 ;;
     --force) FORCE=1 ;;
     -h | --help) usage; exit 0 ;;
@@ -85,6 +90,7 @@ else
   esac
 fi
 
+VER="${TAG#v}"
 BASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
 
 # --- Install directory ----------------------------------------------------------
@@ -95,16 +101,15 @@ else
   INSTALL_DIR="${NIOCM_INSTALL_DIR:-${HOME}/.local/bin}"
 fi
 
-# --- Download + verify + install helper ----------------------------------------
+# --- Helper: Install CLI binary ------------------------------------------------
 
-install_binary() {
+install_cli_binary() {
   local BIN_NAME="$1"
   local ASSET="${BIN_NAME}-${SUFFIX}"
   local DEST="${INSTALL_DIR}/${BIN_NAME}"
 
-  echo "${BIN_NAME} ${TAG} (${SUFFIX}) → ${DEST}" >&2
+  echo "Installing CLI: ${BIN_NAME} ${TAG} (${SUFFIX}) → ${DEST}" >&2
   echo "  download: ${BASE_URL}/${ASSET}" >&2
-  echo "  checksum: ${BASE_URL}/SHA256SUMS" >&2
 
   if [ "$DRY_RUN" -eq 1 ]; then
     echo "(dry run — nothing installed)" >&2
@@ -114,9 +119,8 @@ install_binary() {
   mkdir -p "$INSTALL_DIR"
 
   # No-op upgrade when the installed version already matches (unless --force).
-  if [ "$FORCE" -eq 0 ] && [ -x "$DEST" ] && "$DEST" --version 2>/dev/null | grep -q " ${TAG#v}"; then
-    echo "${BIN_NAME} ${TAG#v} is already installed at ${DEST}." >&2
-    echo "Re-run with --force to reinstall." >&2
+  if [ "$FORCE" -eq 0 ] && [ -x "$DEST" ] && "$DEST" --version 2>/dev/null | grep -q " ${VER}"; then
+    echo "${BIN_NAME} ${VER} is already installed at ${DEST}." >&2
     return 0
   fi
 
@@ -130,7 +134,7 @@ install_binary() {
   EXPECTED="$(awk -v a="${ASSET}" '$2 == a || $2 == ("*" a) { print $1; exit }' "${TMP_DIR}/SHA256SUMS")"
 
   if [ -z "$EXPECTED" ]; then
-    echo "error: no checksum found for ${ASSET} in the release's SHA256SUMS." >&2
+    echo "error: no checksum found for ${ASSET} in SHA256SUMS." >&2
     exit 1
   fi
 
@@ -147,17 +151,130 @@ install_binary() {
     echo "error: checksum mismatch for ${ASSET}." >&2
     echo "  expected: ${EXPECTED}" >&2
     echo "  actual:   ${ACTUAL}" >&2
-    echo "  Refusing to install. Re-run to retry (may be a transient error)." >&2
     exit 1
   fi
 
   install -m 0755 "${TMP_DIR}/${ASSET}" "$DEST"
-  # Also create symlink nio-cm -> niocm
   ln -sf "$DEST" "${INSTALL_DIR}/nio-cm"
-  echo "Installed ${BIN_NAME} ${TAG#v} to ${DEST}" >&2
+  echo "✓ Installed ${BIN_NAME} to ${DEST}" >&2
 }
 
-install_binary "niocm"
+# --- Helper: Install Desktop App on macOS --------------------------------------
+
+install_desktop_macos() {
+  local MAC_ARCH
+  if [ "$ARCH_SUFFIX" = "aarch64" ]; then
+    MAC_ARCH="aarch64"
+  else
+    MAC_ARCH="x64"
+  fi
+  local ASSET="NioCM_${VER}_${MAC_ARCH}.dmg"
+  local DMG_URL="${BASE_URL}/${ASSET}"
+
+  echo "Downloading NioCM Desktop for macOS (${MAC_ARCH})…" >&2
+  echo "  download: ${DMG_URL}" >&2
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "(dry run — NioCM.app would be installed to /Applications/NioCM.app)" >&2
+    install_cli_binary "niocm"
+    return 0
+  fi
+
+  local TMP_DIR
+  TMP_DIR="$(mktemp -d)"
+  trap 'rm -rf "$TMP_DIR"' EXIT
+
+  curl -fSL "$DMG_URL" -o "${TMP_DIR}/${ASSET}"
+
+  local MOUNT_DIR="${TMP_DIR}/mount"
+  mkdir -p "$MOUNT_DIR"
+  echo "Mounting disk image…" >&2
+  hdiutil attach -nobrowse -readonly -mountpoint "$MOUNT_DIR" "${TMP_DIR}/${ASSET}" >/dev/null
+
+  echo "Installing to /Applications/NioCM.app…" >&2
+  rm -rf /Applications/NioCM.app
+  cp -R "${MOUNT_DIR}/NioCM.app" /Applications/
+  hdiutil detach "$MOUNT_DIR" >/dev/null
+
+  echo "✓ Installed NioCM Desktop to /Applications/NioCM.app" >&2
+
+  # Also install CLI daemon for terminal access
+  install_cli_binary "niocm"
+}
+
+# --- Helper: Install Desktop App on Linux --------------------------------------
+
+install_desktop_linux() {
+  if [ "$ARCH_SUFFIX" != "x86_64" ]; then
+    echo "Notice: Native desktop GUI builds for Linux ${ARCH_SUFFIX} are coming soon." >&2
+    echo "Installing the high-performance CLI daemon…" >&2
+    install_cli_binary "niocm"
+    return 0
+  fi
+
+  local ASSET="NioCM_${VER}_amd64.AppImage"
+  local APPIMAGE_URL="${BASE_URL}/${ASSET}"
+  local APP_DIR="${HOME}/.local/share/niocm"
+  local DEST="${APP_DIR}/NioCM.AppImage"
+
+  echo "Downloading NioCM Desktop for Linux (${ARCH_SUFFIX})…" >&2
+  echo "  download: ${APPIMAGE_URL}" >&2
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "(dry run — NioCM AppImage would be installed to ${DEST})" >&2
+    install_cli_binary "niocm"
+    return 0
+  fi
+
+  mkdir -p "$APP_DIR" "$INSTALL_DIR"
+
+  local TMP_DIR
+  TMP_DIR="$(mktemp -d)"
+  trap 'rm -rf "$TMP_DIR"' EXIT
+
+  curl -fSL "$APPIMAGE_URL" -o "${TMP_DIR}/${ASSET}"
+  install -m 0755 "${TMP_DIR}/${ASSET}" "$DEST"
+
+  # Create desktop launcher script
+  cat <<EOF > "${INSTALL_DIR}/niocm-desktop"
+#!/bin/sh
+exec "${DEST}" "\$@"
+EOF
+  chmod +x "${INSTALL_DIR}/niocm-desktop"
+
+  # Create .desktop file for system application menu
+  local DESKTOP_DIR="${HOME}/.local/share/applications"
+  mkdir -p "$DESKTOP_DIR"
+  cat <<EOF > "${DESKTOP_DIR}/nio-cm.desktop"
+[Desktop Entry]
+Name=NioCM
+Comment=The Agentic Terminal — Desktop Web & Native App powered by NioAI
+Exec=${DEST} %U
+Terminal=false
+Type=Application
+Icon=utilities-terminal
+Categories=Development;System;TerminalEmulator;
+StartupWMClass=niocm-desktop
+EOF
+
+  echo "✓ Installed NioCM Desktop AppImage to ${DEST}" >&2
+  echo "✓ Created application menu launcher at ${DESKTOP_DIR}/nio-cm.desktop" >&2
+  echo "✓ Created desktop command at ${INSTALL_DIR}/niocm-desktop" >&2
+
+  # Also install CLI binary for terminal access
+  install_cli_binary "niocm"
+}
+
+# --- Dispatch installation -----------------------------------------------------
+
+if [ "$MODE" = "desktop" ]; then
+  case "$OS" in
+    Darwin) install_desktop_macos ;;
+    Linux)  install_desktop_linux ;;
+  esac
+else
+  install_cli_binary "niocm"
+fi
 
 # --- Bundle NioAI agent (mandatory for AI chat & terminal intelligence) --------
 
@@ -205,8 +322,18 @@ case ":$PATH:" in
 esac
 
 echo >&2
-echo "Start NioCM with:      ${INSTALL_DIR}/niocm (or nio-cm)" >&2
-echo "Open in browser:       http://localhost:1422" >&2
+if [ "$MODE" = "desktop" ]; then
+  if [ "$OS" = "Darwin" ]; then
+    echo "Launch NioCM Desktop:  Open 'NioCM' from /Applications (or Spotlight)" >&2
+  else
+    echo "Launch NioCM Desktop:  Open 'NioCM' from application menu or run '${INSTALL_DIR}/niocm-desktop'" >&2
+  fi
+  echo "CLI Terminal Daemon:   ${INSTALL_DIR}/niocm (or nio-cm)" >&2
+else
+  echo "Start NioCM Daemon:    ${INSTALL_DIR}/niocm (or nio-cm)" >&2
+  echo "Open in browser:       http://localhost:1422" >&2
+fi
+
 if command -v nio >/dev/null 2>&1; then
   echo "NioAI agent bundled:   $(command -v nio)" >&2
 fi
